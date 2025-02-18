@@ -1,0 +1,28 @@
+modules:
+  jira:issuePanel:
+    - key: findic-ai-demo-hello-world-issue-panel
+      resource: main
+      resolver:
+        function: resolver
+      render: native
+      title: Gherkin erstellen
+      icon: src/res/findic-icon.svg
+  function:
+    - key: resolver
+      handler: index.handler
+resources:
+  - key: main
+    path: src/frontend/index.jsx
+#  - key: findic-icon
+#    path: src/res/findic.svg
+permissions:
+  scopes:
+    - 'read:jira-work'
+  external:
+    fetch:
+      backend:
+        - 'api.openai.com'
+app:
+  runtime:
+    name: nodejs22.x
+  id: ari:cloud:ecosystem::app/c1bea97e-f941-4529-a26f-c93cc4f0443c
