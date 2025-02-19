@@ -77,11 +77,13 @@ resolver.define('callOpenAI', async ({payload, context}) => {
   // Body for API call
   const body = {
     model: getOpenAPIModel(),
+
     n: choiceCount,
     messages: [{
       role: 'user',
       content: payload.prompt
-    }]
+    }],
+    response_format: gherkin_format, 
   };
 
   // API call options
@@ -111,12 +113,65 @@ resolver.define('callOpenAI', async ({payload, context}) => {
     }
   } else {
     const text = await response.text();
-    console.log(`Responsetext OpenAI API- `,text);
     result = text;
   }
 
   return result;
 });
+
+const gherkin_format = {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "gherkin_response",
+      "strict": true,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "feature": {
+            "type": "string",
+            "description": "Der Titel des Features"
+          },
+          "scenarios": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Der Titel des Szenarios"
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "keyword": {
+                        "type": "string",
+                        "enum": ["Given", "When", "Then", "And", "But"],
+                        "description": "Das Schlüsselwort des Schritts"
+                      },
+                      "text": {
+                        "type": "string",
+                        "description": "Der Text des Schritts"
+                      }
+                    },
+                    "required": ["keyword", "text"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["title", "steps"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["feature", "scenarios"],
+        "additionalProperties": false
+      }
+    }
+  }
+
+
 
 
 

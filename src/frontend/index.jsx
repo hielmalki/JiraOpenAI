@@ -19,7 +19,7 @@ Erstelle genau ein einziges Gherkin-Script mit deutscher Gherkin-Syntax. Gebe au
           console.log("Gherkin - " + gherkinFromApi);
           // const splitGherkin=splitIntoparagraph(gherkinFromApi)
           // console.log("GherkinSplit - " + JSON.stringify(splitGherkin));
-
+          // console.log('Featuretitel: ',gherkinFromApi.feature);
           setGherkin(gherkinFromApi);
         }
       } catch (error) {
