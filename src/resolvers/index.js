@@ -122,55 +122,36 @@ resolver.define('callOpenAI', async ({payload, context}) => {
 const gherkin_format = {
     "type": "json_schema",
     "json_schema": {
-      "name": "gherkin_response",
-      "strict": true,
+      "name": "jira_evaluation",
       "schema": {
         "type": "object",
         "properties": {
-          "feature": {
-            "type": "string",
-            "description": "Der Titel des Features"
+          "confidence_score": {
+            "type": "integer",
+            "description": "Confidence score ranging from 0 to 10"
           },
-          "scenarios": {
+          "evaluation_text": {
+            "type": "string",
+            "description": "Detailed evaluation of the current requirement"
+          },
+          "improvement_suggestions": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "title": {
-                  "type": "string",
-                  "description": "Der Titel des Szenarios"
-                },
-                "steps": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "keyword": {
-                        "type": "string",
-                        "enum": ["Given", "When", "Then", "And", "But"],
-                        "description": "Das Schlüsselwort des Schritts"
-                      },
-                      "text": {
-                        "type": "string",
-                        "description": "Der Text des Schritts"
-                      }
-                    },
-                    "required": ["keyword", "text"],
-                    "additionalProperties": false
-                  }
-                }
-              },
-              "required": ["title", "steps"],
-              "additionalProperties": false
-            }
+              "type": "string"
+            },
+            "description": "List of bullet points with improvement suggestions"
           }
         },
-        "required": ["feature", "scenarios"],
+        "required": [
+          "confidence_score",
+          "evaluation_text",
+          "improvement_suggestions"
+        ],
         "additionalProperties": false
-      }
+      },
+      "strict": true
     }
   }
-
 
 
 
