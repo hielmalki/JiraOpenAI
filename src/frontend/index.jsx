@@ -18,10 +18,10 @@ const App = () => {
       try {
         const descriptionData = await invoke('getDescription');
         console.log("Description - " + descriptionData);
-        const { description, customfield } = JSON.parse(descriptionData);
+        const { description, customfield, title } = JSON.parse(descriptionData);
         const descriptionText = extractTextFromDescription(description);
         if (descriptionData) {
-          const prompt = `Dies ist die Anforderung eines Features extrahiert aus einer Jira-Beschreibung: "${descriptionText}" und den Akzeptanzkriterien: "${customfield}".
+          const prompt = `Dies ist die Anforderung eines Features mit dem Titel: "${title}", extrahiert aus einer Jira-Beschreibung: "${descriptionText}" und den Akzeptanzkriterien: "${customfield}".
 Du bist professioneller Requirement engineer. Bewerte die gegebene Anforderung hinsichtlich, Konsistenz, logischer Lücken/Fehler, Verständlichkeit. Fasse deine Erkenntnisse im evaluation_text in bis zu 500 Zeichen und ohne ohne weitere markups oder Auflistungen zusammen. Gib dafür eine confidence_score von 0 bis 10. Wenn du es für sinnvoll hältst, gib in den improvement_suggestions Möglichkeiten, wie der Text verbessert werden kann.`
           const gherkinFromApi = await invoke('callOpenAI', { prompt });
           console.log("Prompt - ", prompt);

@@ -47,16 +47,18 @@ resolver.define('getDescription', async ({context}) => {
   const responseData = await issueData.json();
   const description = responseData.fields.description;
   const customfield = responseData.fields.customfield_10047;
+  const title = responseData.fields.summary;
 
+  console.log("LOGGER - jsonString: ", responseData.fields);
   // Create an object with both fields
+
   const result = {
     description: description,
-    customfield: customfield
+    customfield: customfield,
+    title: title
   };
-
   // Convert the result to a JSON string
   const jsonString = JSON.stringify(result);
-  console.log("LOGGER - jsonString: ", jsonString);
 
   return jsonString;
 });
