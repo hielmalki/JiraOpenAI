@@ -36,36 +36,29 @@ resolver.define('getComments', async ({context}) => {
 });
 
 resolver.define('getDescription', async ({context}) => {
-  // API call to get all comments of Jira issue with key
+  // API call to get the Jira issue with key
   const issueData = await api.asApp().requestJira(route`/rest/api/3/issue/${context.extension.issue.key}`, {
     headers: {
       'Accept': 'application/json'
     }
   });
 
-  // API call to get all comments of Jira issue with key
+  // Parse the response data
   const responseData = await issueData.json();
-  const jsonData = await responseData.fields.description
+  const description = responseData.fields.description;
+  const customfield = responseData.fields.customfield_10047;
 
+  // Create an object with both fields
+  const result = {
+    description: description,
+    customfield: customfield
+  };
 
-  // Extracting all texts in the comments into extractedTexts array
-/*   await jsonData.map(comment => {
-    if (comment.body && comment.body.content) {
-      comment.body.content.map(contentItem => {
-        if (contentItem.type === "paragraph" && contentItem.content) {
-          contentItem.content.map(textItem => {
-            if (textItem.type === "text" && textItem.text) {
-              extractedTexts.push(textItem.text);
-            }
-          });
-        }
-      });
-    }
-  }); */
+  // Convert the result to a JSON string
+  const jsonString = JSON.stringify(result);
+  console.log("LOGGER - jsonString: ", jsonString);
 
-const jsonString=JSON.stringify(jsonData)
-
-return jsonString;
+  return jsonString;
 });
 
 resolver.define('callOpenAI', async ({payload, context}) => {
