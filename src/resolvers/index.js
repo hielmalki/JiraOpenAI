@@ -115,38 +115,36 @@ resolver.define('callOpenAI', async ({payload, context}) => {
 });
 
 const gherkin_format = {
-    "type": "json_schema",
-    "json_schema": {
-      "name": "jira_evaluation",
-      "schema": {
-        "type": "object",
-        "properties": {
-          "confidence_score": {
-            "type": "integer",
-            "description": "Confidence score ranging from 0 to 10"
-          },
-          "evaluation_text": {
-            "type": "string",
-            "description": "Detailed evaluation of the current requirement"
-          },
-          "improvement_suggestions": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "List of bullet points with improvement suggestions"
-          }
-        },
-        "required": [
-          "confidence_score",
-          "evaluation_text",
-          "improvement_suggestions"
-        ],
-        "additionalProperties": false
+  type: 'json_schema',
+  json_schema: {
+    name: 'jira_evaluation_extended',
+    schema: {
+      type: 'object',
+      properties: {
+        consistency_score: { type: 'integer', minimum: 1, maximum: 10 },
+        heading_score:     { type: 'integer', minimum: 1, maximum: 10 },
+        understandability_score: { type: 'integer', minimum: 1, maximum: 10 },
+        completeness_score: { type: 'integer', minimum: 1, maximum: 10 },
+        evaluation_text:   { type: 'string' },
+        improvement_suggestions: {
+          type: 'array',
+          items: { type: 'string' }
+        }
       },
-      "strict": true
-    }
+      required: [
+        'consistency_score',
+        'heading_score',
+        'understandability_score',
+        'completeness_score',
+        'evaluation_text',
+        'improvement_suggestions'
+      ],
+      additionalProperties: false
+    },
+    strict: true
   }
+};
+
 
 
 

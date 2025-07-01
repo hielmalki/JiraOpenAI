@@ -1,15 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import ForgeReconciler, { Text, Heading, List, ListItem } from '@forge/react';
-import { Em, Strong, Strike } from '@forge/react';
-import { invoke, view } from '@forge/bridge';
+import { invoke } from '@forge/bridge';
+
+const THRESHOLD = 6; // Schwellenwert: 60 % auf 1–10 Skala
 
 
 
 const App = () => {
   const [gherkin, setGherkin] = useState({
-    "confidence_score": 0,
-    "evaluation_text": "Analyse wird vorbereitet...",
-    "improvement_suggestions": []
+    consistency_score: 0,
+    heading_score: 0,
+    understandability_score: 0,
+    completeness_score: 0,
+    evaluation_text: 'Analyse wird vorbereitet…',
+    improvement_suggestions: []
   });
 
   useEffect(() => {
@@ -22,7 +26,12 @@ const App = () => {
         const descriptionText = extractTextFromDescription(description);
         if (descriptionData) {
           const prompt = `Dies ist die Anforderung eines Features mit dem Titel: "${title}", extrahiert aus einer Jira-Beschreibung: "${descriptionText}" und den Akzeptanzkriterien: "${customfield}".
-Du bist professioneller Requirement engineer. Bewerte die gegebene Anforderung hinsichtlich, Konsistenz, logischer Lücken/Fehler, Verständlichkeit. Fasse deine Erkenntnisse im evaluation_text in bis zu 500 Zeichen und ohne ohne weitere markups oder Auflistungen zusammen. Gib dafür eine confidence_score von 0 bis 10. Wenn du es für sinnvoll hältst, gib in den improvement_suggestions Möglichkeiten, wie der Text verbessert werden kann.`
+                                Du bist professioneller Requirement engineer. Bewerte die Anforderung in 4 Kategorien (je 1–10):
+                                Konsistenz: keine Widersprüche, keine Logikfehler, inhaltliche Übereinstimmung 
+                                Überschrift: passt der Titel zur Anforderung?
+                                Verständlichkeit: Detailtiefe und Klarheit der Informationen
+                                Vollständigkeit: alle nötigen Infos vorhanden.
+                                `
           const gherkinFromApi = await invoke('callOpenAI', { prompt });
           console.log("Prompt - ", prompt);
           const parsedGherkin = JSON.parse(gherkinFromApi)
@@ -46,55 +55,71 @@ Du bist professioneller Requirement engineer. Bewerte die gegebene Anforderung h
     };
     getDescription();
   }, []);
+  // Schritt 4: Durchschnitts-Scores berechnen und Schwellenwert prüfen
+  const averageScore = useMemo(() => {
+    const { consistency_score, heading_score, understandability_score, completeness_score } = gherkin;
+    return Math.round((consistency_score + heading_score + understandability_score + completeness_score) / 4);
+  }, [gherkin]);
 
-  const extractTextFromDescription = (description) => {
-    let extractedText = '';
+  const allAboveThreshold = averageScore >= THRESHOLD &&
+      [gherkin.consistency_score, gherkin.heading_score, gherkin.understandability_score, gherkin.completeness_score]
+          .every(score => score >= THRESHOLD);
 
-    if (description && description.content) {
-      description.content.forEach(contentItem => {
-        if (contentItem.type === 'paragraph' && contentItem.content) {
-          contentItem.content.forEach(textItem => {
-            if (textItem.type === 'text' && textItem.text) {
-              extractedText += textItem.text + ' ';
-            }
-          });
-        } else if (contentItem.type === 'bulletList' && contentItem.content) {
-          contentItem.content.forEach(listItem => {
-            if (listItem.type === 'listItem' && listItem.content) {
-              listItem.content.forEach(paragraph => {
-                if (paragraph.type === 'paragraph' && paragraph.content) {
-                  paragraph.content.forEach(textItem => {
-                    if (textItem.type === 'text' && textItem.text) {
-                      extractedText += textItem.text + ' ';
-                    }
-                  });
-                }
-              });
-            }
-          });
-        }
-      });
-    }
+  // Anzeige
+  if (allAboveThreshold) {
+    return <Text>🎉 Alles sieht gut aus! (Durchschnittsscore: {averageScore}/10)</Text>;
+  }
 
-    return extractedText.trim();
-  };
   return (
-    <>
-    <Text>{gherkin.evaluation_text}</Text>
-    {gherkin.improvement_suggestions.length > 0 && (<Heading as="h4">Verbesserungsvorschläge</Heading>)}
- {    <List type="unordered">
-      {gherkin.improvement_suggestions.map((suggestion, index) => (
-        <ListItem key={index}>{suggestion}</ListItem>
-      ))}
-    </List>}
-    </>
+      <>
+        <Text>Durchschnittsscore: {averageScore}/10</Text>
+        <Text>{gherkin.evaluation_text}</Text>
+
+        {gherkin.improvement_suggestions.length > 0 && (
+            <>
+              <Heading as="h4">Verbesserungsvorschläge</Heading>
+              <List type="unordered">
+                {gherkin.improvement_suggestions.slice(0, 2).map((s, i) => (
+                    <ListItem key={i}>{s}</ListItem>
+                ))}
+              </List>
+            </>
+        )}
+
+        <Heading as="h4">Einzelscores</Heading>
+        <List type="unordered">
+          <ListItem>Konsistenz: {gherkin.consistency_score}/10</ListItem>
+          <ListItem>Überschrift: {gherkin.heading_score}/10</ListItem>
+          <ListItem>Verständlichkeit: {gherkin.understandability_score}/10</ListItem>
+          <ListItem>Vollständigkeit: {gherkin.completeness_score}/10</ListItem>
+        </List>
+      </>
   );
+};
 
 
+// Hilfsfunktion zur Extraktion des Texts aus Jira-Description
+const extractTextFromDescription = (description) => {
+  let text = '';
+  if (description?.content) {
+    description.content.forEach(item => {
+      if (item.type === 'paragraph') {
+        item.content?.forEach(t => { if (t.text) text += t.text + ' '; });
+      }
+      if (item.type === 'bulletList') {
+        item.content?.forEach(li =>
+            li.content?.forEach(p =>
+                p.content?.forEach(t => { if (t.text) text += t.text + ' '; })
+            )
+        );
+      }
+    });
+  }
+  return text.trim();
 };
 
 ForgeReconciler.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
 );
