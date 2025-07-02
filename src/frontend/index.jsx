@@ -17,7 +17,7 @@ const App = () => {
   });
 
   useEffect(() => {
-  
+
     const getDescription = async () => {
       try {
         const descriptionData = await invoke('getDescription');
@@ -35,7 +35,7 @@ const App = () => {
           const gherkinFromApi = await invoke('callOpenAI', { prompt });
           console.log("Prompt - ", prompt);
           const parsedGherkin = JSON.parse(gherkinFromApi)
-          
+
           setGherkin(parsedGherkin);
           if (gherkinFromApi) {
             console.log("Gherkin - ", parsedGherkin);
@@ -44,7 +44,7 @@ const App = () => {
             console.log("ConfidenceOutput- ", parsedGherkin.confidence_score || "undefined");
         } else {
             console.log("gherkinFromApi is undefined");
-        } 
+        }
 
           setGherkin(parsedGherkin);
         }
@@ -67,7 +67,12 @@ const App = () => {
 
   // Anzeige
   if (allAboveThreshold) {
-    return <Text>🎉 Alles sieht gut aus! (Durchschnittsscore: {averageScore}/10)</Text>;
+    return (
+        <>
+          <Text>🎉 Alles sieht gut aus! (Durchschnittsscore: {averageScore}/10)</Text>
+          <Text>{gherkin.evaluation_text}</Text>
+        </>
+    );
   }
 
   return (
