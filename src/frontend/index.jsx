@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import ForgeReconciler, { Text, Heading, List, ListItem } from '@forge/react';
+import ForgeReconciler, { Text, Heading, List, ListItem, Stack } from '@forge/react';
 import { invoke } from '@forge/bridge';
 
 const THRESHOLD = 6;
@@ -44,7 +44,7 @@ Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
 
     if (allAbove) {
         return (
-            <>
+            <Stack space="space.200">
                 <Text>🎉 Alles sieht gut aus! (Durchschnittsscore: {averageScore}/10)</Text>
                 <Heading as="h4">Einzelscores</Heading>
                 <List type="unordered">
@@ -52,7 +52,7 @@ Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
                     <ListItem>Verständlichkeit: {understandability_score}/10</ListItem>
                     <ListItem>Value: {value_score}/10</ListItem>
                 </List>
-            </>
+            </Stack>
         );
     }
 
