@@ -1,4 +1,5 @@
 import Resolver from '@forge/resolver';
+import api, { route } from '@forge/api';
 
 const resolver = new Resolver();
 
@@ -8,16 +9,12 @@ resolver.define('getIssueData', async ({ context }) => {
         throw new Error('Issue key is missing from extension context.');
     }
 
-    const runtimeApi = global.api;
-    if (!runtimeApi?.asApp) {
-        throw new Error('Forge runtime API is unavailable.');
-    }
-
-    const response = await runtimeApi
-        .asApp()
-        .requestJira(`/rest/api/3/issue/${issueKey}?fields=summary,description,customfield_10047`, {
+    const response = await api.asApp().requestJira(
+        route`/rest/api/3/issue/${issueKey}?fields=summary,description,customfield_10047`,
+        {
             headers: { Accept: 'application/json' }
-        });
+        }
+    );
 
     if (!response.ok) {
         const text = await response.text();
