@@ -14,7 +14,7 @@ import ForgeReconciler, {
     Stack,
     Text
 } from '@forge/react';
-import { invoke, requestJira, view } from '@forge/bridge';
+import { invoke } from '@forge/bridge';
 
 const THRESHOLD = 6;
 const UNKNOWN_TEXT = 'Nicht verfügbar';
@@ -76,7 +76,8 @@ const App = () => {
                 setStatus('loading');
                 setError('');
 
-                const { description, customfield, title } = await fetchIssueData();
+                const issueData = await invoke('getIssueData');
+                const { description, customfield, title } = JSON.parse(issueData);
                 const descriptionText = extractTextFromDescription(description);
                 const acceptanceCriteria = extractCustomFieldText(customfield);
 
@@ -348,28 +349,6 @@ function extractCustomFieldText(customfield) {
     }
 
     return '';
-}
-
-async function fetchIssueData() {
-    const context = await view.getContext();
-    const issueKey = context?.extension?.issue?.key;
-    if (!issueKey) {
-        throw new Error('Issue-Kontext konnte nicht ermittelt werden.');
-    }
-
-    const response = await requestJira(
-        `/rest/api/3/issue/${issueKey}?fields=summary,description,customfield_10047`
-    );
-    if (!response.ok) {
-        throw new Error(`Jira-Daten konnten nicht geladen werden (HTTP ${response.status}).`);
-    }
-
-    const data = await response.json();
-    return {
-        title: data?.fields?.summary || '',
-        description: data?.fields?.description || null,
-        customfield: data?.fields?.customfield_10047
-    };
 }
 
 function extractTextFromDescription(description) {

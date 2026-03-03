@@ -2,6 +2,36 @@ import Resolver from '@forge/resolver';
 
 const resolver = new Resolver();
 
+resolver.define('getIssueData', async ({ context }) => {
+    const issueKey = context?.extension?.issue?.key;
+    if (!issueKey) {
+        throw new Error('Issue key is missing from extension context.');
+    }
+
+    const runtimeApi = global.api;
+    if (!runtimeApi?.asApp) {
+        throw new Error('Forge runtime API is unavailable.');
+    }
+
+    const response = await runtimeApi
+        .asApp()
+        .requestJira(`/rest/api/3/issue/${issueKey}?fields=summary,description,customfield_10047`, {
+            headers: { Accept: 'application/json' }
+        });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Jira-Daten konnten nicht geladen werden (HTTP ${response.status}): ${text}`);
+    }
+
+    const data = await response.json();
+    return JSON.stringify({
+        title: data?.fields?.summary || '',
+        description: data?.fields?.description || null,
+        customfield: data?.fields?.customfield_10047
+    });
+});
+
 // Define the JSON schema for three-category evaluation
 const gherkin_format = {
     type: 'json_schema',
