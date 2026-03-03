@@ -1,46 +1,6 @@
 import Resolver from '@forge/resolver';
-import api, { route, fetch } from '@forge/api';
 
 const resolver = new Resolver();
-
-// Get all comment texts from the Jira issue
-resolver.define('getComments', async ({ context }) => {
-    const commentsRes = await api.asApp().requestJira(
-        route`/rest/api/3/issue/${context.extension.issue.key}/comment`,
-        { headers: { Accept: 'application/json' } }
-    );
-    const { comments } = await commentsRes.json();
-
-    const texts = [];
-    for (const comment of comments) {
-        if (comment.body?.content) {
-            for (const block of comment.body.content) {
-                if (block.type === 'paragraph' && block.content) {
-                    for (const textItem of block.content) {
-                        if (textItem.type === 'text' && textItem.text) {
-                            texts.push(textItem.text);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return texts.join(' ');
-});
-
-// Get description, custom field and summary from the Jira issue
-resolver.define('getDescription', async ({ context }) => {
-    const issueRes = await api.asApp().requestJira(
-        route`/rest/api/3/issue/${context.extension.issue.key}`,
-        { headers: { Accept: 'application/json' } }
-    );
-    const data = await issueRes.json();
-    const description = data.fields.description;
-    const customfield = data.fields.customfield_10047;
-    const title = data.fields.summary;
-
-    return JSON.stringify({ description, customfield, title });
-});
 
 // Define the JSON schema for three-category evaluation
 const gherkin_format = {
@@ -72,7 +32,12 @@ const gherkin_format = {
 
 // Call OpenAI with our prompt and schema
 resolver.define('callOpenAI', async ({ payload }) => {
-    const url = `https://api.openai.com/v1/chat/completions`;
+    const endpoint = new URL('/v1/chat/completions', 'https://api.openai.com');
+    const fetchImpl = globalThis.fetch;
+    if (typeof fetchImpl !== 'function') {
+        throw new Error('Global fetch is not available in this runtime.');
+    }
+
     const body = {
         model: getOpenAPIModel(),
         n: 1,
@@ -88,7 +53,7 @@ resolver.define('callOpenAI', async ({ payload }) => {
         body: JSON.stringify(body)
     };
 
-    const response = await fetch(url, options);
+    const response = await fetchImpl(endpoint, options);
     if (response.status !== 200) {
         const errText = await response.text();
         console.error('OpenAI API Error:', errText);
