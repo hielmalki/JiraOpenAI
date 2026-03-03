@@ -8,7 +8,8 @@ import ForgeReconciler, {
     ProgressBar,
     SectionMessage,
     Stack,
-    Text
+    Text,
+    TextArea
 } from '@forge/react';
 import { invoke } from '@forge/bridge';
 import ReflectionHeader from './components/ReflectionHeader';
@@ -57,6 +58,10 @@ const dividerStyles = {
 
 const copyHintStyles = {
     color: 'color.text.subtle'
+};
+
+const copyFallbackStyles = {
+    paddingTop: 'space.100'
 };
 
 const App = () => {
@@ -130,17 +135,23 @@ Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
             return;
         }
 
+        const textToCopy = result.improvement_suggestions.join('\n');
+
+        if (typeof document !== 'undefined' && !document.hasFocus()) {
+            setCopyState('manual');
+            return;
+        }
+
         try {
-            const textToCopy = result.improvement_suggestions.join('\n');
             if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
                 await navigator.clipboard.writeText(textToCopy);
                 setCopyState('copied');
             } else {
-                setCopyState('unsupported');
+                setCopyState('manual');
             }
         } catch (copyError) {
             console.error(copyError);
-            setCopyState('failed');
+            setCopyState('manual');
         }
 
         setTimeout(() => {
@@ -173,6 +184,7 @@ Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
                             suggestions={result.improvement_suggestions}
                             onCopyAll={copyAllSuggestions}
                             copyState={copyState}
+                            copyPayload={result.improvement_suggestions.join('\n')}
                         />
                     </Stack>
                 )}
@@ -218,7 +230,7 @@ const ScoresSection = ({ analysis }) => (
     </Box>
 );
 
-const SuggestionsSection = ({ suggestions, onCopyAll, copyState }) => (
+const SuggestionsSection = ({ suggestions, onCopyAll, copyState, copyPayload }) => (
     <Box xcss={sectionStyles}>
         <Stack space="space.100">
             <Inline spread="space-between" alignBlock="center" shouldWrap rowSpace="space.100">
@@ -232,9 +244,15 @@ const SuggestionsSection = ({ suggestions, onCopyAll, copyState }) => (
                 <Box xcss={copyHintStyles}>
                     <Text>
                         {copyState === 'copied' && 'Vorschläge kopiert'}
-                        {copyState === 'unsupported' && 'Clipboard in dieser Umgebung nicht verfügbar'}
-                        {copyState === 'failed' && 'Kopieren fehlgeschlagen'}
+                        {copyState === 'manual' &&
+                            'Automatisches Kopieren nicht möglich. Bitte Text unten markieren und kopieren.'}
                     </Text>
+                </Box>
+            )}
+
+            {copyState === 'manual' && (
+                <Box xcss={copyFallbackStyles}>
+                    <TextArea value={copyPayload} isReadOnly minimumRows={4} />
                 </Box>
             )}
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Inline, Stack, Strong, Text } from '@forge/react';
 
 const rowStyles = {
-    paddingBlock: 'space.125'
+    paddingBlock: 'space.075'
 };
 
 const barTrackStyles = {
@@ -48,7 +48,7 @@ const ScoreRow = ({ label, score, feedback }) => {
 
     return (
         <Box xcss={rowStyles}>
-            <Stack space="space.100">
+            <Stack space="space.050">
                 <Inline spread="space-between" alignBlock="center">
                     <Text>
                         <Strong>{label}</Strong>

@@ -10,8 +10,8 @@ const scoreLabelStyles = {
 };
 
 const scoreValueStyles = {
-    fontSize: '32px',
-    fontWeight: '700',
+    fontSize: '40px',
+    fontWeight: '800',
     lineHeight: '1'
 };
 
