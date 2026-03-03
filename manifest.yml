@@ -6,7 +6,7 @@ modules:
         function: resolver
       render: native
       title: Reflection
-      icon: src/res/findic-icon.svg
+      icon: src/res/findic.svg
   function:
     - key: resolver
       handler: index.handler
@@ -25,4 +25,4 @@ permissions:
 app:
   runtime:
     name: nodejs22.x
-  id: ari:cloud:ecosystem::app/91703d98-e0f6-4e84-97f2-49a7db90de72
+  id: ari:cloud:ecosystem::app/658a2af7-6594-4531-9456-5de813de470d
