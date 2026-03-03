@@ -1,52 +1,105 @@
 import React, { useEffect, useState } from 'react';
-import ForgeReconciler, { Text, Paragraph } from '@forge/react';
-import { invoke, view } from '@forge/bridge';
+import ForgeReconciler, { Text, Heading, List, ListItem, Stack } from '@forge/react';
+import { invoke } from '@forge/bridge';
+
+const THRESHOLD = 6;
 
 const App = () => {
-  const [gherkin, setGherkin] = useState();
+    const [gherkin, setGherkin] = useState({
+        consistency_score: 0,
+        understandability_score: 0,
+        value_score: 0,
+        improvement_suggestions: []
+    });
 
-  // Getting all the comments of the issue.
-  useEffect(() => {
-  
-    const getDescription = async () => {
-      try {
-        const descriptionData = await invoke('getDescription');
-        console.log("Description - " + descriptionData);
-        if (descriptionData) {
-          const prompt = `Generiere aus dem folgenden Anforderungstext ein exemplarisches Gherkin-Script: "${descriptionData}".
-Erstelle genau ein einziges Gherkin-Script mit deutscher Gherkin-Syntax. Gebe ausschließlich den Inhalt der Sektion "Szenario:" ohne Überschrift, Einleitung, Zusammenfassung oder Erläuterung wieder. Verwende zur Darstellung reinen Text ohne Code-Formatierung. Erstelle das Script ohne "Feature:"- und "Hintergrund:"-Sektionen. Füge Zeilenumbrüche für eine bessere Lesbarkeit ein.`
-          const gherkinFromApi = await invoke('callOpenAI', { prompt });
-          console.log("Gherkin - " + gherkinFromApi);
-          // const splitGherkin=splitIntoparagraph(gherkinFromApi)
-          // console.log("GherkinSplit - " + JSON.stringify(splitGherkin));
+    useEffect(() => {
+        (async () => {
+            try {
+                const descriptionData = await invoke('getDescription');
+                const { description, customfield, title } = JSON.parse(descriptionData);
+                const descriptionText = extractTextFromDescription(description);
 
-          setGherkin(gherkinFromApi);
-        }
-      } catch (error) {
-        console.error("Error invoking function: ", error);
-      }
-    };
-    getDescription();
-  }, []);
-  
-//   function splitIntoparagraph(gherkinString) {
-//     // Create a regular expression from the array of words
-//     return gherkinString.split('\n').map((paragraph, i) => (     <Paragraph key={i}>{paragraph}</Paragraph> ));
-    
-// }
+                const prompt = `
+Dies ist die Anforderung eines Features mit dem Titel: "${title}", extrahiert aus einer Jira-Beschreibung: "${descriptionText}"
+und den Akzeptanzkriterien: "${customfield}".
+Du bist ein professioneller Requirement Engineer. Bewerte die Anforderung in 3 Kategorien (je 1–10):
+• Verständlichkeit: Vollständigkeit der Eingaben, Detailtiefe und Klarheit der Informationen
+• Konsistenz: keine Widersprüche, keine Logikfehler, inhaltliche Übereinstimmung der Jira-Felder zueinander
+• Value: Validierbares (testbares) Ziel muss formuliert sein, ein messbarer Business Value erkennbar
+Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
+`.trim();
 
-   
-  return (
-      <>
-        {gherkin}
-      </>
-  );
+                const result = await invoke('callOpenAI', { prompt });
+                setGherkin(JSON.parse(result));
+            } catch (err) {
+                console.error(err);
+            }
+        })();
+    }, []);
 
+    const { consistency_score, understandability_score, value_score, improvement_suggestions } = gherkin;
+    const scores = [consistency_score, understandability_score, value_score];
+    const averageScore = Math.round((scores[0] + scores[1] + scores[2]) / 3);
+    const allAbove = scores.every(s => s >= THRESHOLD);
 
+    if (allAbove) {
+        return (
+            <Stack space="space.200">
+                <Text>🎉 Alles sieht gut aus! (Durchschnittsscore: {averageScore}/10)</Text>
+                <Heading as="h4">Einzelscores</Heading>
+                <List type="unordered">
+                    <ListItem>Konsistenz: {consistency_score}/10</ListItem>
+                    <ListItem>Verständlichkeit: {understandability_score}/10</ListItem>
+                    <ListItem>Value: {value_score}/10</ListItem>
+                </List>
+            </Stack>
+        );
+    }
+
+    return (
+        <>
+            <Text>Durchschnittsscore: {averageScore}/10</Text>
+
+            {improvement_suggestions.length > 0 && (
+                <>
+                    <Heading as="h4">Verbesserungsvorschläge</Heading>
+                    <List type="unordered">
+                        {improvement_suggestions.map((s, i) => (
+                            <ListItem key={i}>{s}</ListItem>
+                        ))}
+                    </List>
+                </>
+            )}
+
+            <Heading as="h4">Einzelscores</Heading>
+            <List type="unordered">
+                <ListItem>Konsistenz: {consistency_score}/10</ListItem>
+                <ListItem>Verständlichkeit: {understandability_score}/10</ListItem>
+                <ListItem>Value: {value_score}/10</ListItem>
+            </List>
+        </>
+    );
 };
 
+function extractTextFromDescription(description) {
+    let text = '';
+    description?.content?.forEach(item => {
+        if (item.type === 'paragraph') {
+            item.content?.forEach(t => t.text && (text += t.text + ' '));
+        }
+        if (item.type === 'bulletList') {
+            item.content?.forEach(li =>
+                li.content?.forEach(p =>
+                    p.content?.forEach(t => t.text && (text += t.text + ' '))
+                )
+            );
+        }
+    });
+    return text.trim();
+}
+
 ForgeReconciler.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+    <React.StrictMode>
+        <App />
+    </React.StrictMode>
 );
