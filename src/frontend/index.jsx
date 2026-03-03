@@ -49,12 +49,6 @@ const noteStyles = {
     backgroundColor: 'color.background.accent.gray.subtlest'
 };
 
-const loadingLineStyles = {
-    padding: 'space.125',
-    borderRadius: 'border.radius',
-    backgroundColor: 'color.background.neutral'
-};
-
 const dividerStyles = {
     borderTopWidth: 'border.width',
     borderTopStyle: 'solid',
@@ -268,17 +262,8 @@ const FooterNote = () => (
 
 const LoadingState = () => (
     <Box xcss={sectionStyles}>
-        <Stack space="space.150">
+        <Stack space="space.100">
             <ProgressBar ariaLabel="Reflection wird geladen" isIndeterminate />
-            <Box xcss={loadingLineStyles}>
-                <Text>Kontext wird vorbereitet…</Text>
-            </Box>
-            <Box xcss={loadingLineStyles}>
-                <Text>Scores werden berechnet…</Text>
-            </Box>
-            <Box xcss={loadingLineStyles}>
-                <Text>Vorschläge werden zusammengestellt…</Text>
-            </Box>
         </Stack>
     </Box>
 );

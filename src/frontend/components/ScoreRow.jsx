@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge, Box, Inline, Stack, Text } from '@forge/react';
+import { Box, Inline, Stack, Strong, Text } from '@forge/react';
 
 const rowStyles = {
     paddingBlock: 'space.125'
@@ -20,18 +20,18 @@ const feedbackStyles = {
 export const getScoreAppearance = score => {
     if (score < 6) {
         return {
-            barColor: 'color.background.danger',
+            barColor: '#FF2C2C',
             toneLabel: 'Kritisch'
         };
     }
     if (score < 8) {
         return {
-            barColor: 'color.background.warning',
+            barColor: '#FFDE21',
             toneLabel: 'Solide'
         };
     }
     return {
-        barColor: 'color.background.success',
+        barColor: '#50C878',
         toneLabel: 'Stark'
     };
 };
@@ -50,8 +50,12 @@ const ScoreRow = ({ label, score, feedback }) => {
         <Box xcss={rowStyles}>
             <Stack space="space.100">
                 <Inline spread="space-between" alignBlock="center">
-                    <Text>{label}</Text>
-                    <Badge>{safeScore}/10</Badge>
+                    <Text>
+                        <Strong>{label}</Strong>
+                    </Text>
+                    <Text>
+                        <Strong>{`${safeScore}/10`}</Strong>
+                    </Text>
                 </Inline>
 
                 <Box xcss={barTrackStyles}>
