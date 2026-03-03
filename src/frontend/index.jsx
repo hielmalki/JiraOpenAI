@@ -5,12 +5,9 @@ import ForgeReconciler, {
     Heading,
     Inline,
     Link,
-    List,
-    ListItem,
     Lozenge,
     ProgressBar,
     SectionMessage,
-    Spinner,
     Stack,
     Text
 } from '@forge/react';
@@ -18,12 +15,30 @@ import { invoke } from '@forge/bridge';
 
 const THRESHOLD = 6;
 const UNKNOWN_TEXT = 'Nicht verfügbar';
+const PURPOSE_TEXT =
+    'Qualitäts-Check für Jira-Requirements mit Fokus auf Verständlichkeit, Konsistenz und messbaren Business Value.';
+
+const SCORE_CONFIG = [
+    { key: 'consistency_score', label: 'Konsistenz' },
+    { key: 'understandability_score', label: 'Verständlichkeit' },
+    { key: 'value_score', label: 'Value' }
+];
 
 const pageStyles = {
+    padding: 'space.250',
+    backgroundColor: 'color.background.neutral.subtle'
+};
+
+const surfaceCardStyles = {
+    backgroundColor: 'color.background.neutral',
+    borderColor: 'color.border',
+    borderWidth: 'border.width',
+    borderStyle: 'solid',
+    borderRadius: 'border.radius',
     padding: 'space.250'
 };
 
-const cardStyles = {
+const compactCardStyles = {
     backgroundColor: 'color.background.neutral',
     borderColor: 'color.border',
     borderWidth: 'border.width',
@@ -32,9 +47,22 @@ const cardStyles = {
     padding: 'space.200'
 };
 
-const columnStyles = {
-    minWidth: '260px',
-    flexGrow: 1
+const sectionShellStyles = {
+    backgroundColor: 'color.background.neutral',
+    borderColor: 'color.border',
+    borderWidth: 'border.width',
+    borderStyle: 'solid',
+    borderRadius: 'border.radius',
+    padding: 'space.200'
+};
+
+const summaryIssueStyles = {
+    backgroundColor: 'color.background.input',
+    borderColor: 'color.border',
+    borderWidth: 'border.width',
+    borderStyle: 'solid',
+    borderRadius: 'border.radius',
+    padding: 'space.150'
 };
 
 const scoreRowStyles = {
@@ -46,7 +74,12 @@ const scoreRowStyles = {
     padding: 'space.150'
 };
 
-const helperStyles = {
+const columnStyles = {
+    minWidth: '300px',
+    flexGrow: 1
+};
+
+const hintCardStyles = {
     backgroundColor: 'color.background.accent.gray.subtlest',
     borderColor: 'color.border.discovery',
     borderWidth: 'border.width',
@@ -55,11 +88,18 @@ const helperStyles = {
     padding: 'space.150'
 };
 
-const SCORE_CONFIG = [
-    { key: 'consistency_score', label: 'Konsistenz' },
-    { key: 'understandability_score', label: 'Verständlichkeit' },
-    { key: 'value_score', label: 'Value' }
-];
+const placeholderStyles = {
+    backgroundColor: 'color.background.input',
+    borderRadius: 'border.radius',
+    padding: 'space.150'
+};
+
+const STATUS = {
+    loading: 'loading',
+    ready: 'ready',
+    empty: 'empty',
+    error: 'error'
+};
 
 const App = () => {
     const [analysis, setAnalysis] = useState(null);
@@ -67,19 +107,30 @@ const App = () => {
         title: '',
         acceptanceCriteria: ''
     });
-    const [status, setStatus] = useState('loading');
+    const [status, setStatus] = useState(STATUS.loading);
     const [error, setError] = useState('');
 
     useEffect(() => {
         (async () => {
             try {
-                setStatus('loading');
+                setStatus(STATUS.loading);
                 setError('');
 
                 const issueData = await invoke('getIssueData');
                 const { description, customfield, title } = JSON.parse(issueData);
                 const descriptionText = extractTextFromDescription(description);
                 const acceptanceCriteria = extractCustomFieldText(customfield);
+
+                setMeta({
+                    title: title || '',
+                    acceptanceCriteria
+                });
+
+                if (!descriptionText && !acceptanceCriteria) {
+                    setAnalysis(null);
+                    setStatus(STATUS.empty);
+                    return;
+                }
 
                 const prompt = `
 Dies ist die Anforderung eines Features mit dem Titel: "${title}", extrahiert aus einer Jira-Beschreibung: "${descriptionText}"
@@ -94,151 +145,222 @@ Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
                 const result = await invoke('callOpenAI', { prompt });
                 const parsedResult = normalizeAnalysisPayload(result);
 
-                setMeta({
-                    title: title || '',
-                    acceptanceCriteria
-                });
                 setAnalysis(parsedResult);
-                setStatus('ready');
+                setStatus(STATUS.ready);
             } catch (err) {
                 console.error(err);
                 setError(err instanceof Error ? err.message : 'Unbekannter Fehler bei der Analyse.');
-                setStatus('error');
+                setStatus(STATUS.error);
             }
         })();
     }, []);
 
-    const { consistency_score, understandability_score, value_score, improvement_suggestions } = analysis || {
+    const fallbackAnalysis = {
         consistency_score: 0,
         understandability_score: 0,
         value_score: 0,
         improvement_suggestions: []
     };
-
-    const scores = [consistency_score, understandability_score, value_score].map(normalizeScore);
+    const result = analysis || fallbackAnalysis;
+    const scores = [result.consistency_score, result.understandability_score, result.value_score].map(normalizeScore);
     const averageScore = getAverageScore(scores);
-    const allAbove = scores.every(s => s >= THRESHOLD);
+    const allAbove = scores.every(score => score >= THRESHOLD);
+    const hasWarning = scores.some(score => score > 0 && score < THRESHOLD);
 
     return (
         <Box xcss={pageStyles}>
             <Stack space="space.250">
-                <Box xcss={cardStyles}>
-                    <Inline spread="space-between" alignBlock="start" shouldWrap rowSpace="space.100">
-                        <Stack space="space.100">
-                            <Inline alignBlock="center" space="space.100" shouldWrap>
-                                <Heading as="h3">Reflection</Heading>
-                                <Lozenge>{meta.acceptanceCriteria || UNKNOWN_TEXT}</Lozenge>
-                            </Inline>
-                            <Text>
-                                Qualitäts-Check für Jira-Requirements mit Fokus auf Verständlichkeit,
-                                Konsistenz und messbaren Business Value.
-                            </Text>
-                            <Text>Issue: {meta.title || UNKNOWN_TEXT}</Text>
-                        </Stack>
-                        <Stack alignInline="end" space="space.050">
-                            <Text>Durchschnittsscore</Text>
-                            <Badge>{status === 'ready' ? `${averageScore}/10` : '-'}</Badge>
-                        </Stack>
-                    </Inline>
-                </Box>
+                <HeaderBar
+                    status={status}
+                    averageScore={averageScore}
+                    acceptanceCriteria={meta.acceptanceCriteria}
+                />
 
-                {status === 'loading' && (
-                    <SectionMessage appearance="information" title="Analyse läuft">
-                        <Inline space="space.100" alignBlock="center">
-                            <Spinner size="medium" label="Analyse wird durchgeführt" />
-                            <Text>Die Anforderung wird bewertet. Das dauert nur wenige Sekunden.</Text>
-                        </Inline>
-                    </SectionMessage>
-                )}
+                <SummaryCard issueTitle={meta.title} />
 
-                {status === 'error' && (
-                    <SectionMessage appearance="error" title="Analyse konnte nicht abgeschlossen werden">
-                        <Stack space="space.100">
-                            <Text>{error || 'Bitte erneut versuchen.'}</Text>
-                            <Text>
-                                Prüfe `OPEN_API_KEY`, App-Berechtigungen und ob die Jira-Felder korrekt gesetzt sind.
-                            </Text>
-                        </Stack>
-                    </SectionMessage>
-                )}
+                {status === STATUS.loading && <LoadingState />}
 
-                {status === 'ready' && (
+                {status === STATUS.error && <ErrorState message={error} />}
+
+                {status === STATUS.empty && <EmptyState />}
+
+                {status === STATUS.ready && (
                     <Stack space="space.200">
-                        <SectionMessage
-                            appearance={allAbove ? 'success' : 'warning'}
-                            title={allAbove ? 'Starkes Ergebnis' : 'Verbesserungspotenzial gefunden'}
-                        >
-                            <Text>
-                                {allAbove
-                                    ? `Alle drei Kategorien liegen bei mindestens ${THRESHOLD}/10.`
-                                    : `Mindestens eine Kategorie liegt unter ${THRESHOLD}/10 und sollte nachgeschärft werden.`}
-                            </Text>
-                        </SectionMessage>
+                        <InsightBanner hasWarning={hasWarning} allAbove={allAbove} />
 
-                        <Inline space="space.200" rowSpace="space.200" shouldWrap alignBlock="start">
-                            <Box xcss={{ ...cardStyles, ...columnStyles }}>
-                                <Stack space="space.150">
-                                    <Heading as="h4">Einzelscores</Heading>
-                                    {SCORE_CONFIG.map(({ key, label }) => {
-                                        const value = normalizeScore(analysis[key]);
-                                        return (
-                                            <Box key={key} xcss={scoreRowStyles}>
-                                                <Stack space="space.100">
-                                                    <Inline spread="space-between" alignBlock="center">
-                                                        <Text>{label}</Text>
-                                                        <Badge>{value}/10</Badge>
-                                                    </Inline>
-                                                    <ProgressBar
-                                                        ariaLabel={`${label} ${value} von 10`}
-                                                        value={value / 10}
-                                                    />
-                                                    <Text>{getScoreHint(value)}</Text>
-                                                </Stack>
-                                            </Box>
-                                        );
-                                    })}
-                                </Stack>
-                            </Box>
-
-                            <Box xcss={{ ...cardStyles, ...columnStyles }}>
-                                <Stack space="space.150">
-                                    <Heading as="h4">Verbesserungsvorschläge</Heading>
-                                    {improvement_suggestions.length > 0 ? (
-                                        <List type="unordered">
-                                            {improvement_suggestions.map((suggestion, index) => (
-                                                <ListItem key={`${suggestion}-${index}`}>{suggestion}</ListItem>
-                                            ))}
-                                        </List>
-                                    ) : (
-                                        <SectionMessage appearance="information" title="Keine Vorschläge notwendig">
-                                            <Text>
-                                                Die Analyse hat aktuell keine konkreten Verbesserungen zurückgegeben.
-                                            </Text>
-                                        </SectionMessage>
-                                    )}
-                                </Stack>
-                            </Box>
+                        <Inline shouldWrap space="space.200" rowSpace="space.200" alignBlock="start">
+                            <ScoresSection analysis={result} />
+                            <SuggestionsSection suggestions={result.improvement_suggestions} />
                         </Inline>
                     </Stack>
                 )}
 
-                <Box xcss={helperStyles}>
-                    <Stack space="space.050">
-                        <Heading as="h5">Hinweis</Heading>
-                        <Text>
-                            Die Bewertung ist eine automatische Erstprüfung. Für Release-Entscheidungen immer zusätzlich
-                            fachlich gegenprüfen.
-                        </Text>
-                        <Text>
-                            Mehr zu Forge und App-Sicherheit:{' '}
-                            <Link href="https://developer.atlassian.com/platform/forge/">Forge Dokumentation</Link>
-                        </Text>
-                    </Stack>
-                </Box>
+                <NoteSection />
             </Stack>
         </Box>
     );
 };
+
+const HeaderBar = ({ status, averageScore, acceptanceCriteria }) => (
+    <Box xcss={surfaceCardStyles}>
+        <Inline spread="space-between" alignBlock="center" shouldWrap rowSpace="space.150">
+            <Inline space="space.100" shouldWrap alignBlock="center">
+                <Heading as="h3">Reflection</Heading>
+                <Lozenge>{acceptanceCriteria || 'NICHT VERFÜGBAR'}</Lozenge>
+            </Inline>
+            <Stack alignInline="end" space="space.050">
+                <Text>Durchschnittsscore</Text>
+                <Badge>{status === STATUS.ready ? `${averageScore}/10` : '-'}</Badge>
+            </Stack>
+        </Inline>
+    </Box>
+);
+
+const SummaryCard = ({ issueTitle }) => (
+    <Box xcss={sectionShellStyles}>
+        <Stack space="space.150">
+            <Heading as="h4">Summary</Heading>
+            <Text>{PURPOSE_TEXT}</Text>
+            <Box xcss={summaryIssueStyles}>
+                <Stack space="space.050">
+                    <Text>Issue</Text>
+                    <Text>{issueTitle || UNKNOWN_TEXT}</Text>
+                </Stack>
+            </Box>
+        </Stack>
+    </Box>
+);
+
+const InsightBanner = ({ hasWarning, allAbove }) => {
+    if (hasWarning) {
+        return (
+            <SectionMessage appearance="warning" title="Verbesserungspotenzial gefunden">
+                <Text>Mindestens eine Kategorie liegt unter 6/10 und sollte nachgeschärft werden.</Text>
+            </SectionMessage>
+        );
+    }
+
+    return (
+        <SectionMessage appearance={allAbove ? 'success' : 'information'} title="Reflexion abgeschlossen">
+            <Text>
+                {allAbove
+                    ? 'Die Anforderung ist konsistent und gut verständlich. Nur Feinschliff nötig.'
+                    : 'Analyse wurde erstellt. Prüfe die Hinweise und priorisiere die nächsten Schritte.'}
+            </Text>
+        </SectionMessage>
+    );
+};
+
+const ScoresSection = ({ analysis }) => (
+    <Box xcss={{ ...sectionShellStyles, ...columnStyles }}>
+        <Stack space="space.150">
+            <Heading as="h4">Einzelscores</Heading>
+            {SCORE_CONFIG.map(({ key, label }) => {
+                const value = normalizeScore(analysis[key]);
+                return (
+                    <Box key={key} xcss={scoreRowStyles}>
+                        <Stack space="space.100">
+                            <Inline spread="space-between" alignBlock="center">
+                                <Text>{label}</Text>
+                                <Badge>{value}/10</Badge>
+                            </Inline>
+                            <ProgressBar ariaLabel={`${label} Score ${value} von 10`} value={value / 10} />
+                            <Text>{getScoreHint(value)}</Text>
+                        </Stack>
+                    </Box>
+                );
+            })}
+        </Stack>
+    </Box>
+);
+
+const SuggestionsSection = ({ suggestions }) => (
+    <Box xcss={{ ...sectionShellStyles, ...columnStyles }}>
+        <Stack space="space.150">
+            <Heading as="h4">Verbesserungsvorschläge</Heading>
+            {suggestions.length > 0 ? (
+                <Stack space="space.100">
+                    {suggestions.map((suggestion, index) => (
+                        <Box key={`${suggestion}-${index}`} xcss={scoreRowStyles}>
+                            <Inline space="space.100" alignBlock="start">
+                                <Text>↳</Text>
+                                <Text>{suggestion}</Text>
+                            </Inline>
+                        </Box>
+                    ))}
+                </Stack>
+            ) : (
+                <SectionMessage appearance="information" title="Keine konkreten Vorschläge vorhanden">
+                    <Text>Die aktuelle Analyse meldet kein akutes Verbesserungsthema.</Text>
+                </SectionMessage>
+            )}
+        </Stack>
+    </Box>
+);
+
+const LoadingState = () => (
+    <Box xcss={sectionShellStyles}>
+        <Stack space="space.150">
+            <Heading as="h4">Analyse wird vorbereitet</Heading>
+            <Text>Wir prüfen gerade die Anforderung und bauen die Reflexion auf.</Text>
+            <Box xcss={placeholderStyles}>
+                <Stack space="space.100">
+                    <Text>Score-Übersicht wird geladen …</Text>
+                    <ProgressBar ariaLabel="Ladevorgang" isIndeterminate />
+                </Stack>
+            </Box>
+            <Box xcss={placeholderStyles}>
+                <Text>Verbesserungsvorschläge werden geladen …</Text>
+            </Box>
+        </Stack>
+    </Box>
+);
+
+const ErrorState = ({ message }) => (
+    <SectionMessage appearance="error" title="Analyse konnte nicht abgeschlossen werden">
+        <Stack space="space.100">
+            <Text>{message || 'Bitte erneut versuchen.'}</Text>
+            <Text>
+                Recovery-Hinweis: Prüfe `OPEN_API_KEY`, Jira-Berechtigungen und ob Beschreibung oder
+                Akzeptanzkriterien vorhanden sind.
+            </Text>
+        </Stack>
+    </SectionMessage>
+);
+
+const EmptyState = () => (
+    <Box xcss={compactCardStyles}>
+        <Stack space="space.100">
+            <Heading as="h4">Noch keine Reflection verfügbar</Heading>
+            <Text>
+                Füge eine aussagekräftige Beschreibung und Akzeptanzkriterien zur Jira-Anforderung hinzu, dann
+                öffne die Reflection erneut.
+            </Text>
+            <SectionMessage appearance="information" title="Nächster Schritt">
+                <Text>
+                    Ergänze das Ticket und lade das Panel neu, damit die Analyse mit vollständigem Kontext erstellt
+                    werden kann.
+                </Text>
+            </SectionMessage>
+        </Stack>
+    </Box>
+);
+
+const NoteSection = () => (
+    <Box xcss={hintCardStyles}>
+        <Stack space="space.050">
+            <Heading as="h5">Hinweis</Heading>
+            <Text>
+                Die Bewertung ist eine automatische Erstprüfung. Für Release-Entscheidungen immer zusätzlich
+                fachlich gegenprüfen.
+            </Text>
+            <Text>
+                Mehr zu Forge und App-Sicherheit:{' '}
+                <Link href="https://developer.atlassian.com/platform/forge/">Forge Dokumentation</Link>
+            </Text>
+        </Stack>
+    </Box>
+);
 
 function normalizeAnalysisPayload(payload) {
     const raw = parseJSON(payload);
@@ -254,11 +376,11 @@ function normalizeAnalysisPayload(payload) {
     };
 
     if (
-        normalized.consistency_score === 0 ||
-        normalized.understandability_score === 0 ||
+        normalized.consistency_score === 0 &&
+        normalized.understandability_score === 0 &&
         normalized.value_score === 0
     ) {
-        throw new Error('OpenAI-Antwort enthält ungültige Scores.');
+        throw new Error('OpenAI-Antwort enthält keine verwertbaren Scores.');
     }
 
     return normalized;
@@ -276,6 +398,7 @@ function parseJSON(text) {
         if (!match) {
             return null;
         }
+
         try {
             return JSON.parse(match[0]);
         } catch {
