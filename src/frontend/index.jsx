@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import ForgeReconciler, {
     Box,
+    Button,
     Heading,
     Inline,
     Link,
+    ProgressBar,
     SectionMessage,
     Stack,
     Text
@@ -14,7 +16,6 @@ import ScoreRow from './components/ScoreRow';
 import SuggestionsList from './components/SuggestionsList';
 
 const THRESHOLD = 6;
-const UNKNOWN_TEXT = 'Nicht verfügbar';
 
 const SCORE_CONFIG = [
     { key: 'consistency_score', label: 'Konsistenz' },
@@ -36,12 +37,6 @@ const pageStyles = {
 
 const summaryStyles = {
     paddingBlock: 'space.150'
-};
-
-const issueCalloutStyles = {
-    padding: 'space.150',
-    borderRadius: 'border.radius',
-    backgroundColor: 'color.background.neutral'
 };
 
 const sectionStyles = {
@@ -66,6 +61,10 @@ const dividerStyles = {
     borderTopColor: 'color.border'
 };
 
+const copyHintStyles = {
+    color: 'color.text.subtle'
+};
+
 const App = () => {
     const [analysis, setAnalysis] = useState(null);
     const [meta, setMeta] = useState({
@@ -74,6 +73,7 @@ const App = () => {
     });
     const [status, setStatus] = useState(STATUS.loading);
     const [error, setError] = useState('');
+    const [copyState, setCopyState] = useState('idle');
 
     useEffect(() => {
         (async () => {
@@ -131,16 +131,39 @@ Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
     const averageScore = getAverageScore(scores);
     const hasWarning = scores.some(score => score > 0 && score < THRESHOLD);
 
+    const copyAllSuggestions = async () => {
+        if (!Array.isArray(result.improvement_suggestions) || result.improvement_suggestions.length === 0) {
+            return;
+        }
+
+        try {
+            const textToCopy = result.improvement_suggestions.join('\n');
+            if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(textToCopy);
+                setCopyState('copied');
+            } else {
+                setCopyState('unsupported');
+            }
+        } catch (copyError) {
+            console.error(copyError);
+            setCopyState('failed');
+        }
+
+        setTimeout(() => {
+            setCopyState('idle');
+        }, 2000);
+    };
+
     return (
         <Box xcss={pageStyles}>
             <Stack space="space.250">
                 <ReflectionHeader
                     averageScore={averageScore}
-                    statusLabel={meta.acceptanceCriteria}
+                    statusLabel={getHeaderStatusLabel(status, meta.acceptanceCriteria)}
                     isReady={status === STATUS.ready}
                 />
 
-                <SummarySection issueText={meta.title} />
+                <SummarySection />
 
                 {status === STATUS.loading && <LoadingState />}
                 {status === STATUS.error && <ErrorState message={error} />}
@@ -152,7 +175,11 @@ Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
 
                         <ScoresSection analysis={result} />
 
-                        <SuggestionsSection suggestions={result.improvement_suggestions} />
+                        <SuggestionsSection
+                            suggestions={result.improvement_suggestions}
+                            onCopyAll={copyAllSuggestions}
+                            copyState={copyState}
+                        />
                     </Stack>
                 )}
 
@@ -162,7 +189,7 @@ Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
     );
 };
 
-const SummarySection = ({ issueText }) => (
+const SummarySection = () => (
     <Box xcss={summaryStyles}>
         <Stack space="space.100">
             <Heading as="h4">Summary</Heading>
@@ -170,10 +197,6 @@ const SummarySection = ({ issueText }) => (
                 Qualitäts-Check für Jira-Requirements mit Fokus auf Verständlichkeit, Konsistenz und messbaren
                 Business Value.
             </Text>
-            <Text>Issue</Text>
-            <Box xcss={issueCalloutStyles}>
-                <Text>{issueText || UNKNOWN_TEXT}</Text>
-            </Box>
         </Stack>
     </Box>
 );
@@ -190,16 +213,37 @@ const ScoresSection = ({ analysis }) => (
             <Heading as="h4">Einzelscores</Heading>
             <Box xcss={dividerStyles} />
             {SCORE_CONFIG.map(({ key, label }) => (
-                <ScoreRow key={key} label={label} score={analysis[key]} feedback={getScoreHint(normalizeScore(analysis[key]))} />
+                <ScoreRow
+                    key={key}
+                    label={label}
+                    score={analysis[key]}
+                    feedback={getScoreHint(normalizeScore(analysis[key]))}
+                />
             ))}
         </Stack>
     </Box>
 );
 
-const SuggestionsSection = ({ suggestions }) => (
+const SuggestionsSection = ({ suggestions, onCopyAll, copyState }) => (
     <Box xcss={sectionStyles}>
         <Stack space="space.100">
-            <Heading as="h4">Verbesserungsvorschläge</Heading>
+            <Inline spread="space-between" alignBlock="center" shouldWrap rowSpace="space.100">
+                <Heading as="h4">Verbesserungsvorschläge</Heading>
+                <Button appearance="subtle" onClick={onCopyAll} isDisabled={!suggestions.length}>
+                    Copy all suggestions
+                </Button>
+            </Inline>
+
+            {copyState !== 'idle' && (
+                <Box xcss={copyHintStyles}>
+                    <Text>
+                        {copyState === 'copied' && 'Vorschläge kopiert'}
+                        {copyState === 'unsupported' && 'Clipboard in dieser Umgebung nicht verfügbar'}
+                        {copyState === 'failed' && 'Kopieren fehlgeschlagen'}
+                    </Text>
+                </Box>
+            )}
+
             <Box xcss={dividerStyles} />
             <SuggestionsList suggestions={suggestions} />
         </Stack>
@@ -224,16 +268,16 @@ const FooterNote = () => (
 
 const LoadingState = () => (
     <Box xcss={sectionStyles}>
-        <Stack space="space.100">
-            <Heading as="h4">Reflection wird geladen</Heading>
+        <Stack space="space.150">
+            <ProgressBar ariaLabel="Reflection wird geladen" isIndeterminate />
             <Box xcss={loadingLineStyles}>
-                <Text>Summary wird vorbereitet…</Text>
+                <Text>Kontext wird vorbereitet…</Text>
             </Box>
             <Box xcss={loadingLineStyles}>
                 <Text>Scores werden berechnet…</Text>
             </Box>
             <Box xcss={loadingLineStyles}>
-                <Text>Vorschläge werden geladen…</Text>
+                <Text>Vorschläge werden zusammengestellt…</Text>
             </Box>
         </Stack>
     </Box>
@@ -262,6 +306,22 @@ const EmptyState = () => (
         </Stack>
     </SectionMessage>
 );
+
+function getHeaderStatusLabel(status, acceptanceCriteria) {
+    if (status === STATUS.loading) {
+        return 'LÄDT';
+    }
+    if (status === STATUS.error) {
+        return 'FEHLER';
+    }
+    if (status === STATUS.empty) {
+        return 'KEINE DATEN';
+    }
+    if (acceptanceCriteria) {
+        return 'KONTEXT OK';
+    }
+    return 'AKTIV';
+}
 
 function normalizeAnalysisPayload(payload) {
     const raw = parseJSON(payload);

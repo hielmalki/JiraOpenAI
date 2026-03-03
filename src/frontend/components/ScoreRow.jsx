@@ -20,28 +20,27 @@ const feedbackStyles = {
 export const getScoreAppearance = score => {
     if (score < 6) {
         return {
-            barColor: 'color.background.danger.bold',
+            barColor: 'color.background.danger',
             toneLabel: 'Kritisch'
         };
     }
     if (score < 8) {
         return {
-            barColor: 'color.background.warning.bold',
+            barColor: 'color.background.warning',
             toneLabel: 'Solide'
         };
     }
     return {
-        barColor: 'color.background.success.bold',
+        barColor: 'color.background.success',
         toneLabel: 'Stark'
     };
 };
 
 const ScoreRow = ({ label, score, feedback }) => {
     const safeScore = Math.max(1, Math.min(10, Number(score) || 0));
-    const progress = `${safeScore * 10}%`;
     const tone = getScoreAppearance(safeScore);
     const barFillStyles = {
-        width: progress,
+        width: `${safeScore * 10}%`,
         height: '8px',
         backgroundColor: tone.barColor,
         borderRadius: 'border.radius'

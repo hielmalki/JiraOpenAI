@@ -1,21 +1,18 @@
 import React from 'react';
-import { Badge, Box, Heading, Inline, Lozenge, Stack, Text } from '@forge/react';
+import { Box, Heading, Inline, Lozenge, Stack, Text } from '@forge/react';
 
 const heroStyles = {
-    paddingBlock: 'space.150'
+    paddingBlock: 'space.100'
 };
 
-const scoreCardStyles = {
-    padding: 'space.150',
-    borderRadius: 'border.radius',
-    backgroundColor: 'color.background.neutral',
-    borderWidth: 'border.width',
-    borderStyle: 'solid',
-    borderColor: 'color.border'
+const scoreLabelStyles = {
+    color: 'color.text.subtle'
 };
 
-const subtitleStyles = {
-    maxWidth: '560px'
+const scoreValueStyles = {
+    fontSize: '32px',
+    fontWeight: '700',
+    lineHeight: '1'
 };
 
 const ReflectionHeader = ({ averageScore, statusLabel, isReady }) => (
@@ -23,20 +20,20 @@ const ReflectionHeader = ({ averageScore, statusLabel, isReady }) => (
         <Inline spread="space-between" alignBlock="start" shouldWrap rowSpace="space.150">
             <Stack space="space.100">
                 <Inline space="space.100" alignBlock="center" shouldWrap>
-                    <Heading as="h3">Reflection</Heading>
-                    <Lozenge>{statusLabel || 'NICHT VERFÜGBAR'}</Lozenge>
+                    <Heading as="h3">Insight Dashboard</Heading>
+                    <Lozenge>{statusLabel}</Lozenge>
                 </Inline>
-                <Box xcss={subtitleStyles}>
-                    <Text>AI-basierte Qualitätsreflexion für Verständlichkeit, Konsistenz und Business Value.</Text>
-                </Box>
+                <Text>AI-basierte Qualitätsreflexion für Verständlichkeit, Konsistenz und Business Value.</Text>
             </Stack>
 
-            <Box xcss={scoreCardStyles}>
-                <Stack alignInline="end" space="space.050">
+            <Stack alignInline="end" space="space.050">
+                <Box xcss={scoreLabelStyles}>
                     <Text>Durchschnittsscore</Text>
-                    <Badge>{isReady ? `${averageScore}/10` : '-'}</Badge>
-                </Stack>
-            </Box>
+                </Box>
+                <Box xcss={scoreValueStyles}>
+                    <Text>{isReady ? `${averageScore}/10` : '--'}</Text>
+                </Box>
+            </Stack>
         </Inline>
     </Box>
 );
