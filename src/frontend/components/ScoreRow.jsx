@@ -2,15 +2,16 @@ import React from 'react';
 import { Box, Inline, Stack, Strong, Text } from '@forge/react';
 
 const rowStyles = {
-    paddingBlock: 'space.075'
+    paddingBlock: 'space.100'
 };
 
 const barTrackStyles = {
     width: '100%',
-    height: '8px',
+    height: '6px',
     borderRadius: 'border.radius',
     backgroundColor: 'color.background.neutral.subtle',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    marginBlock: 'space.025'
 };
 
 const feedbackStyles = {
@@ -26,7 +27,7 @@ export const getScoreAppearance = score => {
     }
     if (score < 8) {
         return {
-            barColor: '#FFDE21',
+            barColor: '#FFCE1B',
             toneLabel: 'Solide'
         };
     }
@@ -41,14 +42,14 @@ const ScoreRow = ({ label, score, feedback }) => {
     const tone = getScoreAppearance(safeScore);
     const barFillStyles = {
         width: `${safeScore * 10}%`,
-        height: '8px',
+        height: '6px',
         backgroundColor: tone.barColor,
         borderRadius: 'border.radius'
     };
 
     return (
         <Box xcss={rowStyles}>
-            <Stack space="space.050">
+            <Stack space="space.075">
                 <Inline spread="space-between" alignBlock="center">
                     <Text>
                         <Strong>{label}</Strong>
