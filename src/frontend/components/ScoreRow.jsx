@@ -21,18 +21,18 @@ const feedbackStyles = {
 export const getScoreAppearance = score => {
     if (score < 6) {
         return {
-            barColor: '#FF2C2C',
+            barColor: 'color.background.danger.bold',
             toneLabel: 'Kritisch'
         };
     }
     if (score < 8) {
         return {
-            barColor: '#FFCE1B',
+            barColor: 'color.background.warning.bold',
             toneLabel: 'Solide'
         };
     }
     return {
-        barColor: '#50C878',
+        barColor: 'color.background.success.bold',
         toneLabel: 'Stark'
     };
 };

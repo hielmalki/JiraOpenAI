@@ -9,12 +9,6 @@ const scoreLabelStyles = {
     color: 'color.text.subtle'
 };
 
-const scoreValueStyles = {
-    fontSize: '40px',
-    fontWeight: '800',
-    lineHeight: '1'
-};
-
 const ReflectionHeader = ({ averageScore, statusLabel, isReady }) => (
     <Box xcss={heroStyles}>
         <Inline spread="space-between" alignBlock="start" shouldWrap rowSpace="space.150">
@@ -30,9 +24,7 @@ const ReflectionHeader = ({ averageScore, statusLabel, isReady }) => (
                 <Box xcss={scoreLabelStyles}>
                     <Text>Durchschnittsscore</Text>
                 </Box>
-                <Box xcss={scoreValueStyles}>
-                    <Text>{isReady ? `${averageScore}/10` : '--'}</Text>
-                </Box>
+                <Heading as="h2">{isReady ? `${averageScore}/10` : '--'}</Heading>
             </Stack>
         </Inline>
     </Box>
