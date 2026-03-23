@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ForgeReconciler, {
     Box,
-    Button,
     Heading,
     Inline,
     Link,
@@ -55,10 +54,6 @@ const dividerStyles = {
     borderTopColor: 'color.border'
 };
 
-const copyHintStyles = {
-    color: 'color.text.subtle'
-};
-
 const App = () => {
     const [analysis, setAnalysis] = useState(null);
     const [meta, setMeta] = useState({
@@ -67,7 +62,6 @@ const App = () => {
     });
     const [status, setStatus] = useState(STATUS.loading);
     const [error, setError] = useState('');
-    const [copyState, setCopyState] = useState('idle');
 
     useEffect(() => {
         (async () => {
@@ -125,30 +119,6 @@ Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
     const averageScore = getAverageScore(scores);
     const hasWarning = scores.some(score => score > 0 && score < THRESHOLD);
 
-    const copyAllSuggestions = async () => {
-        if (!Array.isArray(result.improvement_suggestions) || result.improvement_suggestions.length === 0) {
-            return;
-        }
-
-        const textToCopy = result.improvement_suggestions.join('\n');
-        let copied = copyTextWithExecCommand(textToCopy);
-
-        try {
-            if (!copied && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-                await navigator.clipboard.writeText(textToCopy);
-                copied = true;
-            }
-        } catch (copyError) {
-            console.error(copyError);
-        }
-
-        setCopyState(copied ? 'copied' : 'failed');
-
-        setTimeout(() => {
-            setCopyState('idle');
-        }, 2000);
-    };
-
     return (
         <Box xcss={pageStyles}>
             <Stack space="space.250">
@@ -170,11 +140,7 @@ Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
 
                         <ScoresSection analysis={result} />
 
-                        <SuggestionsSection
-                            suggestions={result.improvement_suggestions}
-                            onCopyAll={copyAllSuggestions}
-                            copyState={copyState}
-                        />
+                        <SuggestionsSection suggestions={result.improvement_suggestions} />
                     </Stack>
                 )}
 
@@ -219,25 +185,10 @@ const ScoresSection = ({ analysis }) => (
     </Box>
 );
 
-const SuggestionsSection = ({ suggestions, onCopyAll, copyState }) => (
+const SuggestionsSection = ({ suggestions }) => (
     <Box xcss={sectionStyles}>
         <Stack space="space.100">
-            <Inline spread="space-between" alignBlock="center" shouldWrap rowSpace="space.100">
-                <Heading as="h4">Verbesserungsvorschläge</Heading>
-                <Button appearance="subtle" onClick={onCopyAll} isDisabled={!suggestions.length}>
-                    Copy all suggestions
-                </Button>
-            </Inline>
-
-            {copyState !== 'idle' && (
-                <Box xcss={copyHintStyles}>
-                    <Text>
-                        {copyState === 'copied' && 'Vorschläge kopiert'}
-                        {copyState === 'failed' && 'Kopieren fehlgeschlagen'}
-                    </Text>
-                </Box>
-            )}
-
+            <Heading as="h4">Verbesserungsvorschläge</Heading>
             <Box xcss={dividerStyles} />
             <SuggestionsList suggestions={suggestions} />
         </Stack>
