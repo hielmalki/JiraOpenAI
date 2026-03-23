@@ -13,12 +13,14 @@ Before modifying ANY file, Codex must:
    feature/<short-description>
    bugfix/<short-description>
    refactor/<short-description>
+   "codex" as feature name not allowed
 
 3. The branch must be created from:
    - main (default)
    - OR the currently active base branch if specified
 
 4. Codex must NEVER:
+   - Commit directly to any feature branch
    - Commit directly to main
    - Commit directly to master
    - Push changes without a feature branch
