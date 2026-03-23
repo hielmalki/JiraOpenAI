@@ -21,7 +21,7 @@ permissions:
   external:
     fetch:
       backend:
-        - 'api.openai.com'
+        - address: 'https://api.openai.com'
 app:
   runtime:
     name: nodejs22.x
