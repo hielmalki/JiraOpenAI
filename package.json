@@ -5,7 +5,8 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "lint": "./node_modules/.bin/eslint \"src/**/*.{js,jsx}\""
+    "lint": "./node_modules/.bin/eslint \"src/**/*.{js,jsx}\"",
+    "test": "node --test test/*.test.mjs"
   },
   "devDependencies": {
     "eslint": "^8.56.0",

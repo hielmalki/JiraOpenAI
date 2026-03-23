@@ -107,6 +107,7 @@ Danach den API-Key eingeben.
 ```bash
 npm run lint
 forge lint
+npm test
 ```
 
 ## Lokale Entwicklung
@@ -191,14 +192,23 @@ forge lint
 
 ### Tests
 
-Aktuell gibt es noch keine automatisierte Test-Suite in diesem Repository. Vor einem Marketplace-Launch sollten mindestens Unit-Tests fuer die Parsing- und Resolver-Logik eingefuehrt werden.
+Das Repository enthaelt jetzt ein leichtgewichtiges Unit-Test-Grundgeruest auf Basis von `node:test`.
+
+Aktuell sind insbesondere die Parsing- und Transformationshilfen der Reflection-Analyse abgedeckt.
+
+Testlauf:
+
+```bash
+npm test
+```
+
+Vor einem Marketplace-Launch sollten zusaetzlich Resolver- und Integrations-Tests ergänzt werden.
 
 ## Bekannte technische Punkte
 
 - In [manifest.yml](/Users/hichamelmalki/projects/JiraOpenAI/JiraOpenAI/manifest.yml) gibt es aktuell noch eine Forge-Warnung zu deprecated `fetch.backend` Egress-Definitionen.
 - Das Feld `customfield_10047` ist aktuell nicht konfigurierbar.
 - Es gibt derzeit keine Lizenzierungslogik fuer einen Paid-Marketplace-Launch.
-- Es gibt derzeit keine Test-Suite.
 - README, Privacy Policy, Terms of Service und Security Policy muessen vor einem Marketplace-Launch finalisiert werden.
 
 ## Production-Readiness
@@ -250,4 +260,3 @@ Fuer den produktiven Betrieb sollten diese organisatorischen Punkte definiert we
 3. Test-Grundgeruest einfuehren
 4. Privacy Policy, Terms und Security Policy schreiben
 5. Marketplace-Listing und Assets vorbereiten
-
