@@ -180,6 +180,7 @@ Aktueller Stand:
 ### Umgebungsvariable
 
 - `OPEN_API_KEY`: OpenAI API Key fuer den Resolver `callOpenAI`
+- `LICENSE_OVERRIDE`: optionaler Schalter fuer Nicht-Produktionsumgebungen mit den Werten `active` oder `inactive`
 
 ## Qualitaetssicherung
 
@@ -209,9 +210,7 @@ Vor einem Marketplace-Launch sollten zusaetzlich Integrations-Tests fuer echte F
 
 ## Bekannte technische Punkte
 
-- In [manifest.yml](/Users/hichamelmalki/projects/JiraOpenAI/JiraOpenAI/manifest.yml) gibt es aktuell noch eine Forge-Warnung zu deprecated `fetch.backend` Egress-Definitionen.
 - Das Feld `customfield_10047` ist aktuell nicht konfigurierbar.
-- Es gibt derzeit keine Lizenzierungslogik fuer einen Paid-Marketplace-Launch.
 - README, Privacy Policy, Terms of Service und Security Policy muessen vor einem Marketplace-Launch finalisiert werden.
 
 ## Production-Readiness
@@ -220,10 +219,7 @@ Dieses Repository ist aktuell funktional fuer Entwicklung und interne Tests, abe
 
 Offene Themen vor dem Launch:
 
-- Licensing fuer Paid App aktivieren und implementieren
 - Security- und Privacy-Unterlagen erstellen
-- Tests einfuehren
-- Manifest-Warnungen bereinigen
 - Marketplace-Branding und Listing vorbereiten
 - Support- und Betriebsprozess definieren
 
@@ -258,8 +254,8 @@ Fuer den produktiven Betrieb sollten diese organisatorischen Punkte definiert we
 
 ## Naechste sinnvolle Schritte
 
-1. Manifest aufraeumen und deprecated Eintraege entfernen
-2. Lizenzierungsstrategie festlegen
-3. Test-Grundgeruest einfuehren
-4. Privacy Policy, Terms und Security Policy schreiben
-5. Marketplace-Listing und Assets vorbereiten
+1. Lizenzierungsstrategie und Preisgestaltung final festlegen
+2. Privacy Policy, Terms und Security Policy schreiben
+3. Marketplace-Listing und Assets vorbereiten
+4. Integrations- und End-to-End-Tests ergaenzen
+5. Production-Deploy und Listing-Submission vorbereiten

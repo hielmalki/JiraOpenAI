@@ -33,6 +33,7 @@ const SCORE_CONFIG = [
 const STATUS = {
     loading: 'loading',
     ready: 'ready',
+    unlicensed: 'unlicensed',
     empty: 'empty',
     error: 'error'
 };
@@ -70,12 +71,21 @@ const App = () => {
     });
     const [status, setStatus] = useState(STATUS.loading);
     const [error, setError] = useState('');
+    const [licenseSource, setLicenseSource] = useState('');
 
     useEffect(() => {
         (async () => {
             try {
                 setStatus(STATUS.loading);
                 setError('');
+
+                const licenseState = await invoke('getLicenseState');
+                setLicenseSource(licenseState?.source || '');
+                if (!licenseState?.isLicensed) {
+                    setAnalysis(null);
+                    setStatus(STATUS.unlicensed);
+                    return;
+                }
 
                 const issueData = await invoke('getIssueData');
                 const { description, customfield, title } = JSON.parse(issueData);
@@ -139,6 +149,7 @@ Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
                 <SummarySection />
 
                 {status === STATUS.loading && <LoadingState />}
+                {status === STATUS.unlicensed && <UnlicensedState licenseSource={licenseSource} />}
                 {status === STATUS.error && <ErrorState message={error} />}
                 {status === STATUS.empty && <EmptyState />}
 
@@ -251,9 +262,30 @@ const EmptyState = () => (
     </SectionMessage>
 );
 
+const UnlicensedState = ({ licenseSource }) => (
+    <SectionMessage appearance="warning" title="Keine aktive Lizenz">
+        <Stack space="space.100">
+            <Text>
+                Diese Installation verfügt aktuell über keine aktive Marketplace-Lizenz. Die Reflection-Analyse ist
+                daher deaktiviert.
+            </Text>
+            <Text>
+                Nächster Schritt: Trial oder bezahlte Lizenz aktivieren. Für Entwicklung und Staging kann optional die
+                Variable `LICENSE_OVERRIDE=active` verwendet werden.
+            </Text>
+            {licenseSource === 'override' && (
+                <Text>Hinweis: Der aktuelle Lizenzstatus wird über `LICENSE_OVERRIDE` gesteuert.</Text>
+            )}
+        </Stack>
+    </SectionMessage>
+);
+
 function getHeaderStatusLabel(status, acceptanceCriteria) {
     if (status === STATUS.loading) {
         return 'LÄDT';
+    }
+    if (status === STATUS.unlicensed) {
+        return 'LIZENZ FEHLT';
     }
     if (status === STATUS.error) {
         return 'FEHLER';

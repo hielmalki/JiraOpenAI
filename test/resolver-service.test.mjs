@@ -1,14 +1,62 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+    assertLicensed,
     buildOpenAIRequest,
+    getLicenseState,
     getIssueKeyFromContext,
     mapIssueData,
+    normalizeLicenseOverride,
     OPENAI_RESPONSE_FORMAT,
     parseOpenAIResponse,
     resolveIssueData,
     resolveOpenAI
 } from '../src/resolvers/service.mjs';
+
+test('normalizeLicenseOverride accepts active and inactive override values', () => {
+    assert.equal(normalizeLicenseOverride('active'), true);
+    assert.equal(normalizeLicenseOverride('true'), true);
+    assert.equal(normalizeLicenseOverride('inactive'), false);
+    assert.equal(normalizeLicenseOverride('false'), false);
+    assert.equal(normalizeLicenseOverride('unexpected'), null);
+});
+
+test('getLicenseState prefers explicit override values', () => {
+    assert.deepEqual(getLicenseState({ context: {}, licenseOverride: 'inactive' }), {
+        isLicensed: false,
+        source: 'override'
+    });
+});
+
+test('getLicenseState uses context license when available', () => {
+    assert.deepEqual(
+        getLicenseState({
+            context: {
+                license: {
+                    isActive: true
+                }
+            }
+        }),
+        {
+            isLicensed: true,
+            source: 'context'
+        }
+    );
+});
+
+test('getLicenseState falls back to licensed for dev and unlisted environments', () => {
+    assert.deepEqual(getLicenseState({ context: {} }), {
+        isLicensed: true,
+        source: 'implicit'
+    });
+});
+
+test('assertLicensed rejects unlicensed access', () => {
+    assert.throws(
+        () => assertLicensed({ isLicensed: false }),
+        /aktive Marketplace-Lizenz/i
+    );
+});
 
 test('getIssueKeyFromContext returns the Jira issue key', () => {
     assert.equal(getIssueKeyFromContext({ extension: { issue: { key: 'KAN-42' } } }), 'KAN-42');

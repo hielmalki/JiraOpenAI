@@ -25,6 +25,52 @@ export const OPENAI_RESPONSE_FORMAT = {
     }
 };
 
+export function normalizeLicenseOverride(licenseOverride) {
+    if (typeof licenseOverride !== 'string') {
+        return null;
+    }
+
+    const normalized = licenseOverride.trim().toLowerCase();
+    if (normalized === 'active' || normalized === 'true') {
+        return true;
+    }
+    if (normalized === 'inactive' || normalized === 'false') {
+        return false;
+    }
+
+    return null;
+}
+
+export function getLicenseState({ context, licenseOverride }) {
+    const overrideState = normalizeLicenseOverride(licenseOverride);
+    if (overrideState !== null) {
+        return {
+            isLicensed: overrideState,
+            source: 'override'
+        };
+    }
+
+    if (typeof context?.license?.isActive === 'boolean') {
+        return {
+            isLicensed: context.license.isActive,
+            source: 'context'
+        };
+    }
+
+    // In development, staging and unlisted installations the Forge license object
+    // is undefined. Treat those environments as licensed so the app remains testable.
+    return {
+        isLicensed: true,
+        source: 'implicit'
+    };
+}
+
+export function assertLicensed(licenseState) {
+    if (licenseState?.isLicensed !== true) {
+        throw new Error('Diese Funktion erfordert eine aktive Marketplace-Lizenz.');
+    }
+}
+
 export function getIssueKeyFromContext(context) {
     const issueKey = context?.extension?.issue?.key;
     if (!issueKey) {
