@@ -194,7 +194,10 @@ forge lint
 
 Das Repository enthaelt jetzt ein leichtgewichtiges Unit-Test-Grundgeruest auf Basis von `node:test`.
 
-Aktuell sind insbesondere die Parsing- und Transformationshilfen der Reflection-Analyse abgedeckt.
+Aktuell sind insbesondere diese Bereiche abgedeckt:
+
+- Parsing- und Transformationshilfen der Reflection-Analyse
+- Resolver-nahe Service-Logik fuer Jira- und OpenAI-Requests
 
 Testlauf:
 
@@ -202,7 +205,7 @@ Testlauf:
 npm test
 ```
 
-Vor einem Marketplace-Launch sollten zusaetzlich Resolver- und Integrations-Tests ergänzt werden.
+Vor einem Marketplace-Launch sollten zusaetzlich Integrations-Tests fuer echte Forge-/Jira-Laufzeiten ergänzt werden.
 
 ## Bekannte technische Punkte
 
