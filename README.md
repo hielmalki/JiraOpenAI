@@ -233,6 +233,16 @@ Fuer den produktiven Betrieb sollten diese organisatorischen Punkte definiert we
 - Changelog
 - Datenschutz- und Loeschkonzept
 
+## Rechtliche und Security-Dokumente
+
+Erste Vorlagen fuer den Marketplace-Launch liegen unter:
+
+- [docs/PRIVACY_POLICY.md](/Users/hichamelmalki/projects/JiraOpenAI/JiraOpenAI/docs/PRIVACY_POLICY.md)
+- [docs/TERMS_OF_SERVICE.md](/Users/hichamelmalki/projects/JiraOpenAI/JiraOpenAI/docs/TERMS_OF_SERVICE.md)
+- [docs/SECURITY_POLICY.md](/Users/hichamelmalki/projects/JiraOpenAI/JiraOpenAI/docs/SECURITY_POLICY.md)
+
+Diese Vorlagen enthalten bewusst markierte Platzhalter und muessen vor dem Launch mit den finalen Unternehmens- und Rechtsangaben vervollstaendigt werden.
+
 ## Repository-Struktur
 
 ```text
