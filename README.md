@@ -264,8 +264,14 @@ Diese Vorlagen enthalten bewusst markierte Platzhalter und muessen vor dem Launc
 
 ## Naechste sinnvolle Schritte
 
-1. Lizenzierungsstrategie und Preisgestaltung final festlegen
-2. Privacy Policy, Terms und Security Policy schreiben
-3. Marketplace-Listing und Assets vorbereiten
-4. Integrations- und End-to-End-Tests ergaenzen
-5. Production-Deploy und Listing-Submission vorbereiten
+Platzhalter in den drei Dokumenten mit deinen echten Unternehmensdaten füllen
+Marketplace-Listing-Texte erstellen:
+App-Name
+Tagline
+Kurzbeschreibung
+Langbeschreibung
+Highlights
+danach Marketplace-Assets vorbereiten:
+Logo
+Screenshots
+Banner
