@@ -1,13 +1,15 @@
 import Resolver from '@forge/resolver';
 import api, { route } from '@forge/api';
-import { assertLicensed, getLicenseState, resolveIssueData, resolveOpenAI } from './service.mjs';
+import { getLicenseState, resolveIssueData, resolveOpenAI } from './service.mjs';
+import { assertPlanAllowsAnalysis, getPlanState } from './plan-store.mjs';
 import {
     assertWithinInstallationLimits,
+    assertWithinUserDailyLimit,
     assertWithinUserHourlyLimit,
     getUserAccountId,
     getUsageSnapshot,
     prepareUsageSummary,
-    prepareUserHourlyUsage,
+    prepareUserUsage,
     recordSuccessfulAnalysis,
     recordSuccessfulUserAnalysis
 } from './usage-store.mjs';
@@ -21,46 +23,58 @@ resolver.define('getLicenseState', ({ context }) =>
     })
 );
 
-resolver.define('getIssueData', ({ context }) => {
-    assertLicensed(
-        getLicenseState({
+resolver.define('getPlanState', async ({ context }) =>
+    getPlanState({
+        licenseState: getLicenseState({
             context,
             licenseOverride: process.env.LICENSE_OVERRIDE
         })
-    );
+    })
+);
 
-    return resolveIssueData({
-        context,
-        requestJira: api.asApp().requestJira,
-        route
+resolver.define('getIssueData', ({ context }) => {
+    return getPlanState({
+        licenseState: getLicenseState({
+            context,
+            licenseOverride: process.env.LICENSE_OVERRIDE
+        })
+    }).then(planState => {
+        assertPlanAllowsAnalysis(planState);
+        return resolveIssueData({
+            context,
+            requestJira: api.asApp().requestJira,
+            route
+        });
     });
 });
 
 resolver.define('getUsageSnapshot', async ({ context }) => {
-    assertLicensed(
-        getLicenseState({
+    const planState = await getPlanState({
+        licenseState: getLicenseState({
             context,
             licenseOverride: process.env.LICENSE_OVERRIDE
         })
-    );
+    });
 
-    return getUsageSnapshot(getUserAccountId(context));
+    return getUsageSnapshot(getUserAccountId(context), undefined, new Date(), planState.limits);
 });
 
 resolver.define('callOpenAI', async ({ context, payload }) => {
-    assertLicensed(
-        getLicenseState({
+    const planState = await getPlanState({
+        licenseState: getLicenseState({
             context,
             licenseOverride: process.env.LICENSE_OVERRIDE
         })
-    );
+    });
+    assertPlanAllowsAnalysis(planState);
 
     const now = new Date();
     const accountId = getUserAccountId(context);
     const usageSummary = await prepareUsageSummary(undefined, now);
-    const userHourlyUsage = await prepareUserHourlyUsage(accountId, undefined, now);
-    assertWithinInstallationLimits(usageSummary);
-    assertWithinUserHourlyLimit(userHourlyUsage);
+    const userUsage = await prepareUserUsage(accountId, undefined, now);
+    assertWithinInstallationLimits(usageSummary, planState.limits.monthly);
+    assertWithinUserDailyLimit(userUsage, planState.limits.dailyUser);
+    assertWithinUserHourlyLimit(userUsage, planState.limits.hourlyUser);
 
     const result = await resolveOpenAI({
         prompt: payload.prompt,
@@ -76,7 +90,7 @@ resolver.define('callOpenAI', async ({ context, payload }) => {
     }
 
     try {
-        await recordSuccessfulUserAnalysis(accountId, undefined, now, userHourlyUsage);
+        await recordSuccessfulUserAnalysis(accountId, undefined, now, userUsage);
     } catch (error) {
         console.error('User usage tracking write failed:', error);
     }

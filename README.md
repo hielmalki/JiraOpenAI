@@ -242,9 +242,8 @@ Aktuell wird nach jeder erfolgreichen Analyse eine Usage-Statistik pro Installat
 
 - Gesamtanzahl erfolgreicher Analysen
 - Zeitpunkt der letzten erfolgreichen Analyse
-- Tageslimit pro Installation: `200`
-- Monatslimit pro Installation: `200`
-- Nutzerlimit pro Stunde: `200`
+- Trial: `60` Requests pro Monat, `8` pro User und Tag, `3` pro User und Stunde
+- Paid: `120` Requests pro Monat, `10` pro User und Tag, `4` pro User und Stunde
 - maximales Analyse-Input-Limit: `8.000` Zeichen Gesamtinput
 
 Die Buckets werden beim Request lazy zurueckgesetzt:
@@ -273,7 +272,7 @@ Die erste KVS-Logik liegt in:
 
 - [src/resolvers/usage-store.mjs](/Users/hichamelmalki/projects/JiraOpenAI/JiraOpenAI/src/resolvers/usage-store.mjs)
 
-Im naechsten Schritt koennen wir darauf planabhaengige Limits, Trial-Logik und spaetere Enterprise-Profile aufbauen.
+Im naechsten Schritt koennen wir darauf spaetere Enterprise-Profile, Admin-Transparenz und feinere Plansteuerung aufbauen.
 
 ## Rechtliche und Security-Dokumente
 

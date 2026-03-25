@@ -2,7 +2,7 @@ import { kvs } from '@forge/kvs';
 import { APP_ERROR_CODES, createAppError } from '../shared/app-errors.mjs';
 
 const USAGE_SUMMARY_KEY = 'usage.summary';
-const USER_HOURLY_USAGE_PREFIX = 'usage.user';
+const USER_USAGE_PREFIX = 'usage.user';
 
 export const DEFAULT_DAILY_LIMIT = 200;
 export const DEFAULT_MONTHLY_LIMIT = 200;
@@ -24,8 +24,8 @@ export function getUserAccountId(context) {
     return context?.accountId || context?.principal?.accountId || context?.extension?.user?.accountId || 'anonymous';
 }
 
-export function getUserHourlyUsageKey(accountId) {
-    return `${USER_HOURLY_USAGE_PREFIX}.${accountId}.hourly`;
+export function getUserUsageKey(accountId) {
+    return `${USER_USAGE_PREFIX}.${accountId}.usage`;
 }
 
 export function createDefaultUsageSummary(now = new Date()) {
@@ -34,11 +34,6 @@ export function createDefaultUsageSummary(now = new Date()) {
         totalAnalyses: 0,
         lastAnalysisAt: null,
         updatedAt: now.toISOString(),
-        daily: {
-            bucket: formatDayBucket(now),
-            count: 0,
-            limit: DEFAULT_DAILY_LIMIT
-        },
         monthly: {
             bucket: formatMonthBucket(now),
             count: 0,
@@ -47,10 +42,15 @@ export function createDefaultUsageSummary(now = new Date()) {
     };
 }
 
-export function createDefaultUserHourlyUsage(accountId, now = new Date()) {
+export function createDefaultUserUsage(accountId, now = new Date()) {
     return {
         version: 1,
         accountId,
+        daily: {
+            bucket: formatDayBucket(now),
+            count: 0,
+            limit: DEFAULT_DAILY_LIMIT
+        },
         hourly: {
             bucket: formatHourBucket(now),
             count: 0,
@@ -70,12 +70,6 @@ export function normalizeUsageSummary(usageSummary, now = new Date()) {
         ...baseSummary,
         ...usageSummary,
         totalAnalyses: Number(usageSummary.totalAnalyses || 0),
-        daily: {
-            ...baseSummary.daily,
-            ...(usageSummary.daily || {}),
-            count: Number(usageSummary?.daily?.count || 0),
-            limit: Math.max(DEFAULT_DAILY_LIMIT, Number(usageSummary?.daily?.limit || DEFAULT_DAILY_LIMIT))
-        },
         monthly: {
             ...baseSummary.monthly,
             ...(usageSummary.monthly || {}),
@@ -85,8 +79,8 @@ export function normalizeUsageSummary(usageSummary, now = new Date()) {
     };
 }
 
-export function normalizeUserHourlyUsage(accountId, usage, now = new Date()) {
-    const baseUsage = createDefaultUserHourlyUsage(accountId, now);
+export function normalizeUserUsage(accountId, usage, now = new Date()) {
+    const baseUsage = createDefaultUserUsage(accountId, now);
     if (!usage || typeof usage !== 'object') {
         return baseUsage;
     }
@@ -95,6 +89,12 @@ export function normalizeUserHourlyUsage(accountId, usage, now = new Date()) {
         ...baseUsage,
         ...usage,
         accountId,
+        daily: {
+            ...baseUsage.daily,
+            ...(usage.daily || {}),
+            count: Number(usage?.daily?.count || 0),
+            limit: Math.max(DEFAULT_DAILY_LIMIT, Number(usage?.daily?.limit || DEFAULT_DAILY_LIMIT))
+        },
         hourly: {
             ...baseUsage.hourly,
             ...(usage.hourly || {}),
@@ -106,46 +106,69 @@ export function normalizeUserHourlyUsage(accountId, usage, now = new Date()) {
 
 export function resetUsageBucketsIfNeeded(usageSummary, now = new Date()) {
     const normalizedSummary = normalizeUsageSummary(usageSummary, now);
-    const currentDayBucket = formatDayBucket(now);
     const currentMonthBucket = formatMonthBucket(now);
 
-    const nextSummary = {
-        ...normalizedSummary
+    if (normalizedSummary.monthly.bucket === currentMonthBucket) {
+        return normalizedSummary;
+    }
+
+    return {
+        ...normalizedSummary,
+        monthly: {
+            ...normalizedSummary.monthly,
+            bucket: currentMonthBucket,
+            count: 0
+        }
+    };
+}
+
+export function resetUserUsageBucketsIfNeeded(accountId, usage, now = new Date()) {
+    const normalizedUsage = normalizeUserUsage(accountId, usage, now);
+    const currentDayBucket = formatDayBucket(now);
+    const currentHourBucket = formatHourBucket(now);
+
+    const nextUsage = {
+        ...normalizedUsage
     };
 
-    if (normalizedSummary.daily.bucket !== currentDayBucket) {
-        nextSummary.daily = {
-            ...normalizedSummary.daily,
+    if (normalizedUsage.daily.bucket !== currentDayBucket) {
+        nextUsage.daily = {
+            ...normalizedUsage.daily,
             bucket: currentDayBucket,
             count: 0
         };
     }
 
-    if (normalizedSummary.monthly.bucket !== currentMonthBucket) {
-        nextSummary.monthly = {
-            ...normalizedSummary.monthly,
-            bucket: currentMonthBucket,
+    if (normalizedUsage.hourly.bucket !== currentHourBucket) {
+        nextUsage.hourly = {
+            ...normalizedUsage.hourly,
+            bucket: currentHourBucket,
             count: 0
         };
     }
 
-    return nextSummary;
+    return nextUsage;
 }
 
-export function resetUserHourlyBucketIfNeeded(accountId, usage, now = new Date()) {
-    const normalizedUsage = normalizeUserHourlyUsage(accountId, usage, now);
-    const currentHourBucket = formatHourBucket(now);
-
-    if (normalizedUsage.hourly.bucket === currentHourBucket) {
-        return normalizedUsage;
-    }
-
+export function applyUsageLimits(usageSummary, userUsage, limits) {
     return {
-        ...normalizedUsage,
-        hourly: {
-            ...normalizedUsage.hourly,
-            bucket: currentHourBucket,
-            count: 0
+        installation: {
+            ...usageSummary,
+            monthly: {
+                ...usageSummary.monthly,
+                limit: limits?.monthly || usageSummary.monthly.limit
+            }
+        },
+        currentUser: {
+            ...userUsage,
+            daily: {
+                ...userUsage.daily,
+                limit: limits?.dailyUser || userUsage.daily.limit
+            },
+            hourly: {
+                ...userUsage.hourly,
+                limit: limits?.hourlyUser || userUsage.hourly.limit
+            }
         }
     };
 }
@@ -155,19 +178,15 @@ export async function getUsageSummary(store = kvs, now = new Date()) {
     return normalizeUsageSummary(usageSummary, now);
 }
 
-export async function getUserHourlyUsage(accountId, store = kvs, now = new Date()) {
-    const usage = await store.get(getUserHourlyUsageKey(accountId));
-    return normalizeUserHourlyUsage(accountId, usage, now);
+export async function getUserUsage(accountId, store = kvs, now = new Date()) {
+    const usage = await store.get(getUserUsageKey(accountId));
+    return normalizeUserUsage(accountId, usage, now);
 }
 
-export async function getUsageSnapshot(accountId, store = kvs, now = new Date()) {
+export async function getUsageSnapshot(accountId, store = kvs, now = new Date(), limits = null) {
     const usageSummary = await prepareUsageSummary(store, now);
-    const userHourlyUsage = await prepareUserHourlyUsage(accountId, store, now);
-
-    return {
-        installation: usageSummary,
-        currentUser: userHourlyUsage
-    };
+    const userUsage = await prepareUserUsage(accountId, store, now);
+    return applyUsageLimits(usageSummary, userUsage, limits);
 }
 
 export async function prepareUsageSummary(store = kvs, now = new Date()) {
@@ -181,10 +200,10 @@ export async function prepareUsageSummary(store = kvs, now = new Date()) {
     return preparedSummary;
 }
 
-export async function prepareUserHourlyUsage(accountId, store = kvs, now = new Date()) {
-    const key = getUserHourlyUsageKey(accountId);
+export async function prepareUserUsage(accountId, store = kvs, now = new Date()) {
+    const key = getUserUsageKey(accountId);
     const existingUsage = await store.get(key);
-    const preparedUsage = resetUserHourlyBucketIfNeeded(accountId, existingUsage, now);
+    const preparedUsage = resetUserUsageBucketsIfNeeded(accountId, existingUsage, now);
 
     if (JSON.stringify(existingUsage || null) !== JSON.stringify(preparedUsage)) {
         await store.set(key, preparedUsage);
@@ -193,15 +212,8 @@ export async function prepareUserHourlyUsage(accountId, store = kvs, now = new D
     return preparedUsage;
 }
 
-export function assertWithinInstallationLimits(usageSummary) {
-    if (usageSummary.daily.count >= usageSummary.daily.limit) {
-        throw createAppError(
-            APP_ERROR_CODES.DAILY_LIMIT_REACHED,
-            'Tageslimit für diese Installation erreicht. Bitte morgen erneut versuchen.'
-        );
-    }
-
-    if (usageSummary.monthly.count >= usageSummary.monthly.limit) {
+export function assertWithinInstallationLimits(usageSummary, monthlyLimit = usageSummary.monthly.limit) {
+    if (usageSummary.monthly.count >= monthlyLimit) {
         throw createAppError(
             APP_ERROR_CODES.MONTHLY_LIMIT_REACHED,
             'Monatslimit für diese Installation erreicht. Bitte im nächsten Abrechnungszeitraum erneut versuchen.'
@@ -209,8 +221,17 @@ export function assertWithinInstallationLimits(usageSummary) {
     }
 }
 
-export function assertWithinUserHourlyLimit(userHourlyUsage) {
-    if (userHourlyUsage.hourly.count >= userHourlyUsage.hourly.limit) {
+export function assertWithinUserDailyLimit(userUsage, dailyLimit = userUsage.daily.limit) {
+    if (userUsage.daily.count >= dailyLimit) {
+        throw createAppError(
+            APP_ERROR_CODES.DAILY_LIMIT_REACHED,
+            'Tageslimit für diesen Benutzer erreicht. Bitte morgen erneut versuchen.'
+        );
+    }
+}
+
+export function assertWithinUserHourlyLimit(userUsage, hourlyLimit = userUsage.hourly.limit) {
+    if (userUsage.hourly.count >= hourlyLimit) {
         throw createAppError(
             APP_ERROR_CODES.USER_HOURLY_LIMIT_REACHED,
             'Zu viele Analysen in kurzer Zeit. Bitte warte kurz und versuche es in der nächsten Stunde erneut.'
@@ -219,10 +240,7 @@ export function assertWithinUserHourlyLimit(userHourlyUsage) {
 }
 
 export async function recordSuccessfulAnalysis(store = kvs, now = new Date(), usageSummary = null) {
-    const currentSummary = usageSummary
-        ? resetUsageBucketsIfNeeded(usageSummary, now)
-        : await prepareUsageSummary(store, now);
-
+    const currentSummary = usageSummary ? resetUsageBucketsIfNeeded(usageSummary, now) : await prepareUsageSummary(store, now);
     const timestamp = now.toISOString();
     const nextSummary = {
         ...currentSummary,
@@ -230,10 +248,6 @@ export async function recordSuccessfulAnalysis(store = kvs, now = new Date(), us
         totalAnalyses: Number(currentSummary.totalAnalyses || 0) + 1,
         lastAnalysisAt: timestamp,
         updatedAt: timestamp,
-        daily: {
-            ...currentSummary.daily,
-            count: Number(currentSummary.daily.count || 0) + 1
-        },
         monthly: {
             ...currentSummary.monthly,
             count: Number(currentSummary.monthly.count || 0) + 1
@@ -245,14 +259,15 @@ export async function recordSuccessfulAnalysis(store = kvs, now = new Date(), us
 }
 
 export async function recordSuccessfulUserAnalysis(accountId, store = kvs, now = new Date(), usage = null) {
-    const currentUsage = usage
-        ? resetUserHourlyBucketIfNeeded(accountId, usage, now)
-        : await prepareUserHourlyUsage(accountId, store, now);
-
+    const currentUsage = usage ? resetUserUsageBucketsIfNeeded(accountId, usage, now) : await prepareUserUsage(accountId, store, now);
     const nextUsage = {
         ...currentUsage,
         version: 1,
         accountId,
+        daily: {
+            ...currentUsage.daily,
+            count: Number(currentUsage.daily.count || 0) + 1
+        },
         hourly: {
             ...currentUsage.hourly,
             count: Number(currentUsage.hourly.count || 0) + 1
@@ -260,6 +275,6 @@ export async function recordSuccessfulUserAnalysis(accountId, store = kvs, now =
         updatedAt: now.toISOString()
     };
 
-    await store.set(getUserHourlyUsageKey(accountId), nextUsage);
+    await store.set(getUserUsageKey(accountId), nextUsage);
     return nextUsage;
 }

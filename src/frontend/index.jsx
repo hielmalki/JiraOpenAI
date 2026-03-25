@@ -36,7 +36,7 @@ const SCORE_CONFIG = [
 const STATUS = {
     loading: 'loading',
     ready: 'ready',
-    unlicensed: 'unlicensed',
+    blocked: 'blocked',
     empty: 'empty',
     error: 'error'
 };
@@ -75,7 +75,7 @@ const App = () => {
     });
     const [status, setStatus] = useState(STATUS.loading);
     const [error, setError] = useState(null);
-    const [licenseSource, setLicenseSource] = useState('');
+    const [planState, setPlanState] = useState(null);
     const [analysisMeta, setAnalysisMeta] = useState({
         wasInputTruncated: false
     });
@@ -86,12 +86,12 @@ const App = () => {
                 setStatus(STATUS.loading);
                 setError(null);
 
-                const licenseState = await invoke('getLicenseState');
-                setLicenseSource(licenseState?.source || '');
-                if (!licenseState?.isLicensed) {
+                const currentPlanState = await invoke('getPlanState');
+                setPlanState(currentPlanState);
+                if (!currentPlanState?.canAnalyze) {
                     setAnalysis(null);
                     setUsage(null);
-                    setStatus(STATUS.unlicensed);
+                    setStatus(STATUS.blocked);
                     return;
                 }
 
@@ -164,7 +164,7 @@ const App = () => {
                 <SummarySection />
 
                 {status === STATUS.loading && <LoadingState />}
-                {status === STATUS.unlicensed && <UnlicensedState licenseSource={licenseSource} />}
+                {status === STATUS.blocked && <PlanBlockedState planState={planState} />}
                 {status === STATUS.error && <ErrorState error={error} />}
                 {status === STATUS.empty && <EmptyState />}
 
@@ -287,19 +287,16 @@ const EmptyState = () => (
     </SectionMessage>
 );
 
-const UnlicensedState = ({ licenseSource }) => (
-    <SectionMessage appearance="warning" title="Keine aktive Lizenz">
+const PlanBlockedState = ({ planState }) => (
+    <SectionMessage
+        appearance="warning"
+        title={planState?.planType === 'trial' ? 'Testzeitraum beendet' : 'Keine aktive Lizenz'}
+    >
         <Stack space="space.100">
-            <Text>
-                Diese Installation verfügt aktuell über keine aktive Marketplace-Lizenz. Die Reflection-Analyse ist
-                daher deaktiviert.
-            </Text>
-            <Text>
-                Nächster Schritt: Trial oder bezahlte Lizenz aktivieren. Für Entwicklung und Staging kann optional die
-                Variable `LICENSE_OVERRIDE=active` verwendet werden.
-            </Text>
-            {licenseSource === 'override' && (
-                <Text>Hinweis: Der aktuelle Lizenzstatus wird über `LICENSE_OVERRIDE` gesteuert.</Text>
+            {planState?.planType === 'trial' ? (
+                <Text>Bitte aktiviere eine bezahlte Lizenz, um weitere Analysen zu starten.</Text>
+            ) : (
+                <Text>Für diese Installation ist aktuell keine aktive Lizenz vorhanden.</Text>
             )}
         </Stack>
     </SectionMessage>
@@ -309,8 +306,8 @@ function getHeaderStatusLabel(status, acceptanceCriteria) {
     if (status === STATUS.loading) {
         return 'LÄDT';
     }
-    if (status === STATUS.unlicensed) {
-        return 'LIZENZ FEHLT';
+    if (status === STATUS.blocked) {
+        return 'GESPERRT';
     }
     if (status === STATUS.error) {
         return 'FEHLER';

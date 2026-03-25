@@ -85,3 +85,14 @@ test('getErrorPresentation maps monthly, hourly and license errors correctly', (
         'Keine aktive Lizenz'
     );
 });
+
+test('getErrorPresentation maps expired trials to a simple warning state', () => {
+    assert.deepEqual(
+        getErrorPresentation(createAppError(APP_ERROR_CODES.TRIAL_EXPIRED, 'Trial beendet')),
+        {
+            title: 'Testzeitraum beendet',
+            appearance: 'warning',
+            description: 'Bitte aktiviere eine bezahlte Lizenz, um weitere Analysen zu starten.'
+        }
+    );
+});

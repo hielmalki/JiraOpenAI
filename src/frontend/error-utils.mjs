@@ -10,6 +10,12 @@ export function getErrorPresentation(error) {
                 appearance: 'warning',
                 description: 'Für diese Installation ist aktuell keine aktive Lizenz vorhanden.'
             };
+        case APP_ERROR_CODES.TRIAL_EXPIRED:
+            return {
+                title: 'Testzeitraum beendet',
+                appearance: 'warning',
+                description: 'Bitte aktiviere eine bezahlte Lizenz, um weitere Analysen zu starten.'
+            };
         case APP_ERROR_CODES.DAILY_LIMIT_REACHED:
             return {
                 title: 'Tageslimit erreicht',

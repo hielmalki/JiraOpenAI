@@ -65,7 +65,7 @@ const buildMonthlyUsageModel = usage => {
 
 const buildUsageDetails = usage => {
     const monthlyModel = buildMonthlyUsageModel(usage);
-    const daily = usage?.installation?.daily;
+    const daily = usage?.currentUser?.daily;
     const hourly = usage?.currentUser?.hourly;
 
     if (!monthlyModel || !daily || !hourly) {
