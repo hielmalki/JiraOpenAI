@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Heading, Inline, Lozenge, Stack, Strong, Text, Tooltip } from '@forge/react';
+import { Box, Button, Heading, Inline, Lozenge, Popup, Stack, Strong, Text } from '@forge/react';
 
 const heroStyles = {
     paddingBlock: 'space.100'
@@ -31,6 +31,19 @@ const usageIndicatorWarningStyles = {
     backgroundColor: 'color.background.warning'
 };
 
+const usagePopupStyles = {
+    padding: 'space.125',
+    borderRadius: 'border.radius',
+    borderWidth: 'border.width',
+    borderStyle: 'solid',
+    borderColor: 'color.border',
+    backgroundColor: 'color.background.neutral.subtle'
+};
+
+const usagePopupTextStyles = {
+    color: 'color.text'
+};
+
 const buildMonthlyUsageModel = usage => {
     const monthly = usage?.installation?.monthly;
 
@@ -50,34 +63,62 @@ const buildMonthlyUsageModel = usage => {
     };
 };
 
-const buildUsageTooltipText = usage => {
+const buildUsageDetails = usage => {
     const monthlyModel = buildMonthlyUsageModel(usage);
     const daily = usage?.installation?.daily;
     const hourly = usage?.currentUser?.hourly;
 
     if (!monthlyModel || !daily || !hourly) {
-        return '';
+        return null;
     }
 
-    return `Nutzung\nMonat: ${monthlyModel.count} / ${monthlyModel.limit} (${monthlyModel.percent}%)\nHeute: ${daily.count} / ${daily.limit}\nStunde: ${hourly.count} / ${hourly.limit}`;
+    return {
+        monthlyModel,
+        daily,
+        hourly
+    };
 };
 
 const UsageIndicator = ({ usage }) => {
     const monthlyModel = buildMonthlyUsageModel(usage);
-    const tooltipText = buildUsageTooltipText(usage);
+    const details = buildUsageDetails(usage);
+    const [isOpen, setIsOpen] = React.useState(false);
 
-    if (!monthlyModel || !tooltipText) {
+    if (!monthlyModel || !details) {
         return null;
     }
 
     return (
-        <Tooltip content={tooltipText}>
-            <Box xcss={monthlyModel.isWarning ? usageIndicatorWarningStyles : usageIndicatorStyles}>
-                <Text>
-                    Nutzung <Strong>{`${monthlyModel.percent}%`}</Strong>
-                </Text>
-            </Box>
-        </Tooltip>
+        <Popup
+            isOpen={isOpen}
+            placement="top"
+            onClose={() => setIsOpen(false)}
+            content={() => (
+                <Box xcss={usagePopupStyles}>
+                    <Box xcss={usagePopupTextStyles}>
+                        <Stack space="space.050">
+                            <Text>
+                                <Strong>Nutzung</Strong>
+                            </Text>
+                            <Text>{`Monat: ${details.monthlyModel.count} / ${details.monthlyModel.limit} (${details.monthlyModel.percent}%)`}</Text>
+                            <Text>{`Heute: ${details.daily.count} / ${details.daily.limit}`}</Text>
+                            <Text>{`Stunde: ${details.hourly.count} / ${details.hourly.limit}`}</Text>
+                        </Stack>
+                    </Box>
+                </Box>
+            )}
+            trigger={() => (
+                <Button
+                    appearance="subtle"
+                    spacing="none"
+                    onClick={() => setIsOpen(previous => !previous)}
+                    onFocus={() => setIsOpen(true)}
+                    onBlur={() => setIsOpen(false)}
+                >
+                    {`Nutzung ${monthlyModel.percent}%`}
+                </Button>
+            )}
+        />
     );
 };
 
