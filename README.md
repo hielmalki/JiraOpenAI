@@ -262,6 +262,13 @@ Benutzer sehen bei erreichter Grenze jetzt gezielte UI-Hinweise fuer:
 
 Sehr lange Jira-Inhalte werden vor dem OpenAI-Call auf einen stabilen Gesamtumfang begrenzt. Die Analyse wird dabei nicht blockiert, sondern mit einem gekürzten Textauszug ausgeführt.
 
+Zusätzlich zeigt die UI jetzt eine kleine interne Nutzungsübersicht für die aktuelle Installation:
+
+- heutige Nutzung
+- monatliche Nutzung
+- aktueller Nutzer in der laufenden Stunde
+- Gesamtanzahl erfolgreicher Analysen
+
 Die erste KVS-Logik liegt in:
 
 - [src/resolvers/usage-store.mjs](/Users/hichamelmalki/projects/JiraOpenAI/JiraOpenAI/src/resolvers/usage-store.mjs)

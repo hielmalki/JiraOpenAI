@@ -14,6 +14,7 @@ import {
     getUserAccountId,
     getUserHourlyUsage,
     getUserHourlyUsageKey,
+    getUsageSnapshot,
     getUsageSummary,
     prepareUserHourlyUsage,
     prepareUsageSummary,
@@ -216,6 +217,77 @@ test('getUserHourlyUsage returns default hourly usage when nothing is stored', a
             limit: DEFAULT_HOURLY_USER_LIMIT
         },
         updatedAt: '2026-03-25T10:00:00.000Z'
+    });
+});
+
+test('getUsageSnapshot returns installation and current-user usage together', async () => {
+    const now = new Date('2026-03-25T10:00:00.000Z');
+    const store = {
+        async get(key) {
+            if (key === 'usage.summary') {
+                return {
+                    version: 1,
+                    totalAnalyses: 9,
+                    lastAnalysisAt: '2026-03-25T09:30:00.000Z',
+                    updatedAt: '2026-03-25T09:30:00.000Z',
+                    daily: {
+                        bucket: '2026-03-25',
+                        count: 3,
+                        limit: DEFAULT_DAILY_LIMIT
+                    },
+                    monthly: {
+                        bucket: '2026-03',
+                        count: 9,
+                        limit: DEFAULT_MONTHLY_LIMIT
+                    }
+                };
+            }
+
+            if (key === 'usage.user.user-1.hourly') {
+                return {
+                    version: 1,
+                    accountId: 'user-1',
+                    hourly: {
+                        bucket: '2026-03-25T10',
+                        count: 2,
+                        limit: DEFAULT_HOURLY_USER_LIMIT
+                    },
+                    updatedAt: '2026-03-25T09:30:00.000Z'
+                };
+            }
+
+            return null;
+        },
+        async set() {}
+    };
+
+    assert.deepEqual(await getUsageSnapshot('user-1', store, now), {
+        installation: {
+            version: 1,
+            totalAnalyses: 9,
+            lastAnalysisAt: '2026-03-25T09:30:00.000Z',
+            updatedAt: '2026-03-25T09:30:00.000Z',
+            daily: {
+                bucket: '2026-03-25',
+                count: 3,
+                limit: DEFAULT_DAILY_LIMIT
+            },
+            monthly: {
+                bucket: '2026-03',
+                count: 9,
+                limit: DEFAULT_MONTHLY_LIMIT
+            }
+        },
+        currentUser: {
+            version: 1,
+            accountId: 'user-1',
+            hourly: {
+                bucket: '2026-03-25T10',
+                count: 2,
+                limit: DEFAULT_HOURLY_USER_LIMIT
+            },
+            updatedAt: '2026-03-25T09:30:00.000Z'
+        }
     });
 });
 

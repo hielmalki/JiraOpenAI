@@ -5,6 +5,7 @@ import {
     assertWithinInstallationLimits,
     assertWithinUserHourlyLimit,
     getUserAccountId,
+    getUsageSnapshot,
     prepareUsageSummary,
     prepareUserHourlyUsage,
     recordSuccessfulAnalysis,
@@ -33,6 +34,17 @@ resolver.define('getIssueData', ({ context }) => {
         requestJira: api.asApp().requestJira,
         route
     });
+});
+
+resolver.define('getUsageSnapshot', async ({ context }) => {
+    assertLicensed(
+        getLicenseState({
+            context,
+            licenseOverride: process.env.LICENSE_OVERRIDE
+        })
+    );
+
+    return getUsageSnapshot(getUserAccountId(context));
 });
 
 resolver.define('callOpenAI', async ({ context, payload }) => {

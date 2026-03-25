@@ -7,6 +7,7 @@ import ForgeReconciler, {
     ProgressBar,
     SectionMessage,
     Stack,
+    Strong,
     Text
 } from '@forge/react';
 import { invoke } from '@forge/bridge';
@@ -67,6 +68,7 @@ const dividerStyles = {
 
 const App = () => {
     const [analysis, setAnalysis] = useState(null);
+    const [usage, setUsage] = useState(null);
     const [meta, setMeta] = useState({
         title: '',
         acceptanceCriteria: ''
@@ -88,8 +90,17 @@ const App = () => {
                 setLicenseSource(licenseState?.source || '');
                 if (!licenseState?.isLicensed) {
                     setAnalysis(null);
+                    setUsage(null);
                     setStatus(STATUS.unlicensed);
                     return;
+                }
+
+                try {
+                    const usageSnapshot = await invoke('getUsageSnapshot');
+                    setUsage(usageSnapshot);
+                } catch (usageError) {
+                    console.error('Usage snapshot could not be loaded:', usageError);
+                    setUsage(null);
                 }
 
                 const issueData = await invoke('getIssueData');
@@ -150,6 +161,7 @@ const App = () => {
                 />
 
                 <SummarySection />
+                <UsageSection usage={usage} />
 
                 {status === STATUS.loading && <LoadingState />}
                 {status === STATUS.unlicensed && <UnlicensedState licenseSource={licenseSource} />}
@@ -189,6 +201,56 @@ const InsightBanner = () => (
     <SectionMessage appearance="warning" title="Verbesserungspotenzial gefunden">
         <Text>Mindestens eine Kategorie liegt unter 6/10 und sollte nachgeschärft werden.</Text>
     </SectionMessage>
+);
+
+const UsageSection = ({ usage }) => {
+    const installation = usage?.installation;
+    const currentUser = usage?.currentUser;
+
+    if (!installation || !currentUser) {
+        return null;
+    }
+
+    return (
+        <Box xcss={sectionStyles}>
+            <Stack space="space.100">
+                <Heading as="h4">Nutzung</Heading>
+                <Box xcss={dividerStyles} />
+                <Inline shouldWrap space="space.200" rowSpace="space.100">
+                    <UsageStat
+                        label="Heute"
+                        value={`${installation.daily.count}/${installation.daily.limit}`}
+                        hint={`Bucket ${installation.daily.bucket}`}
+                    />
+                    <UsageStat
+                        label="Monat"
+                        value={`${installation.monthly.count}/${installation.monthly.limit}`}
+                        hint={`Bucket ${installation.monthly.bucket}`}
+                    />
+                    <UsageStat
+                        label="Ich / Stunde"
+                        value={`${currentUser.hourly.count}/${currentUser.hourly.limit}`}
+                        hint={`Bucket ${currentUser.hourly.bucket}`}
+                    />
+                    <UsageStat
+                        label="Gesamt"
+                        value={`${installation.totalAnalyses}`}
+                        hint={formatUsageTimestamp(installation.lastAnalysisAt)}
+                    />
+                </Inline>
+            </Stack>
+        </Box>
+    );
+};
+
+const UsageStat = ({ label, value, hint }) => (
+    <Stack space="space.025">
+        <Text>
+            <Strong>{label}</Strong>
+        </Text>
+        <Text>{value}</Text>
+        {hint && <Text>{hint}</Text>}
+    </Stack>
 );
 
 const TruncatedInputNotice = () => (
@@ -310,6 +372,14 @@ function getHeaderStatusLabel(status, acceptanceCriteria) {
         return 'KONTEXT OK';
     }
     return 'AKTIV';
+}
+
+function formatUsageTimestamp(timestamp) {
+    if (!timestamp) {
+        return 'Noch keine erfolgreiche Analyse';
+    }
+
+    return `Zuletzt erfolgreich: ${timestamp}`;
 }
 
 ForgeReconciler.render(

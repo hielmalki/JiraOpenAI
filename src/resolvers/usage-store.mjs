@@ -160,6 +160,16 @@ export async function getUserHourlyUsage(accountId, store = kvs, now = new Date(
     return normalizeUserHourlyUsage(accountId, usage, now);
 }
 
+export async function getUsageSnapshot(accountId, store = kvs, now = new Date()) {
+    const usageSummary = await prepareUsageSummary(store, now);
+    const userHourlyUsage = await prepareUserHourlyUsage(accountId, store, now);
+
+    return {
+        installation: usageSummary,
+        currentUser: userHourlyUsage
+    };
+}
+
 export async function prepareUsageSummary(store = kvs, now = new Date()) {
     const existingSummary = await store.get(USAGE_SUMMARY_KEY);
     const preparedSummary = resetUsageBucketsIfNeeded(existingSummary, now);
