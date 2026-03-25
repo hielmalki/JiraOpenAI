@@ -21,6 +21,7 @@ import {
     normalizeAnalysisPayload,
     normalizeScore
 } from './analysis-utils.mjs';
+import { getErrorPresentation } from './error-utils.mjs';
 
 const THRESHOLD = 6;
 
@@ -70,14 +71,14 @@ const App = () => {
         acceptanceCriteria: ''
     });
     const [status, setStatus] = useState(STATUS.loading);
-    const [error, setError] = useState('');
+    const [error, setError] = useState(null);
     const [licenseSource, setLicenseSource] = useState('');
 
     useEffect(() => {
         (async () => {
             try {
                 setStatus(STATUS.loading);
-                setError('');
+                setError(null);
 
                 const licenseState = await invoke('getLicenseState');
                 setLicenseSource(licenseState?.source || '');
@@ -119,7 +120,7 @@ Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
                 setStatus(STATUS.ready);
             } catch (err) {
                 console.error(err);
-                setError(err instanceof Error ? err.message : 'Unbekannter Fehler bei der Analyse.');
+                setError(getErrorPresentation(err));
                 setStatus(STATUS.error);
             }
         })();
@@ -150,7 +151,7 @@ Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
 
                 {status === STATUS.loading && <LoadingState />}
                 {status === STATUS.unlicensed && <UnlicensedState licenseSource={licenseSource} />}
-                {status === STATUS.error && <ErrorState message={error} />}
+                {status === STATUS.error && <ErrorState error={error} />}
                 {status === STATUS.empty && <EmptyState />}
 
                 {status === STATUS.ready && (
@@ -238,14 +239,14 @@ const LoadingState = () => (
     </Box>
 );
 
-const ErrorState = ({ message }) => (
-    <SectionMessage appearance="error" title="Analyse konnte nicht abgeschlossen werden">
+const ErrorState = ({ error }) => (
+    <SectionMessage
+        appearance={error?.appearance || 'error'}
+        title={error?.title || 'Analyse konnte nicht abgeschlossen werden'}
+    >
         <Stack space="space.100">
-            <Text>{message || 'Bitte erneut versuchen.'}</Text>
-            <Text>
-                Recovery-Hinweis: Prüfe `OPEN_API_KEY`, Jira-Berechtigungen und ob Beschreibung oder
-                Akzeptanzkriterien vorhanden sind.
-            </Text>
+            <Text>{error?.description || 'Bitte erneut versuchen.'}</Text>
+            {error?.recoveryHint && <Text>{`Recovery-Hinweis: ${error.recoveryHint}`}</Text>}
         </Stack>
     </SectionMessage>
 );

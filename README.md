@@ -252,6 +252,13 @@ Die Buckets werden beim Request lazy zurueckgesetzt:
 - neuer Monat -> Monatszaehler auf `0`
 - neue Stunde pro Nutzer -> Nutzerzaehler auf `0`
 
+Benutzer sehen bei erreichter Grenze jetzt gezielte UI-Hinweise fuer:
+
+- fehlende Lizenz
+- Tageslimit erreicht
+- Monatslimit erreicht
+- Nutzerlimit pro Stunde erreicht
+
 Die erste KVS-Logik liegt in:
 
 - [src/resolvers/usage-store.mjs](/Users/hichamelmalki/projects/JiraOpenAI/JiraOpenAI/src/resolvers/usage-store.mjs)

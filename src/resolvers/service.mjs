@@ -1,3 +1,5 @@
+import { APP_ERROR_CODES, createAppError } from '../shared/app-errors.mjs';
+
 export const OPENAI_RESPONSE_FORMAT = {
     type: 'json_schema',
     json_schema: {
@@ -67,7 +69,10 @@ export function getLicenseState({ context, licenseOverride }) {
 
 export function assertLicensed(licenseState) {
     if (licenseState?.isLicensed !== true) {
-        throw new Error('Diese Funktion erfordert eine aktive Marketplace-Lizenz.');
+        throw createAppError(
+            APP_ERROR_CODES.LICENSE_REQUIRED,
+            'Diese Funktion erfordert eine aktive Marketplace-Lizenz.'
+        );
     }
 }
 

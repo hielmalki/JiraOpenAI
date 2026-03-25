@@ -1,4 +1,5 @@
 import { kvs } from '@forge/kvs';
+import { APP_ERROR_CODES, createAppError } from '../shared/app-errors.mjs';
 
 const USAGE_SUMMARY_KEY = 'usage.summary';
 const USER_HOURLY_USAGE_PREFIX = 'usage.user';
@@ -184,27 +185,26 @@ export async function prepareUserHourlyUsage(accountId, store = kvs, now = new D
 
 export function assertWithinInstallationLimits(usageSummary) {
     if (usageSummary.daily.count >= usageSummary.daily.limit) {
-        const error = new Error('Tageslimit für diese Installation erreicht. Bitte morgen erneut versuchen.');
-        error.code = 'DAILY_LIMIT_REACHED';
-        throw error;
+        throw createAppError(
+            APP_ERROR_CODES.DAILY_LIMIT_REACHED,
+            'Tageslimit für diese Installation erreicht. Bitte morgen erneut versuchen.'
+        );
     }
 
     if (usageSummary.monthly.count >= usageSummary.monthly.limit) {
-        const error = new Error(
+        throw createAppError(
+            APP_ERROR_CODES.MONTHLY_LIMIT_REACHED,
             'Monatslimit für diese Installation erreicht. Bitte im nächsten Abrechnungszeitraum erneut versuchen.'
         );
-        error.code = 'MONTHLY_LIMIT_REACHED';
-        throw error;
     }
 }
 
 export function assertWithinUserHourlyLimit(userHourlyUsage) {
     if (userHourlyUsage.hourly.count >= userHourlyUsage.hourly.limit) {
-        const error = new Error(
+        throw createAppError(
+            APP_ERROR_CODES.USER_HOURLY_LIMIT_REACHED,
             'Zu viele Analysen in kurzer Zeit. Bitte warte kurz und versuche es in der nächsten Stunde erneut.'
         );
-        error.code = 'USER_HOURLY_LIMIT_REACHED';
-        throw error;
     }
 }
 
