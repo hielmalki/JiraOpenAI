@@ -1,6 +1,7 @@
 import Resolver from '@forge/resolver';
 import api, { route } from '@forge/api';
 import { assertLicensed, getLicenseState, resolveIssueData, resolveOpenAI } from './service.mjs';
+import { recordSuccessfulAnalysis } from './usage-store.mjs';
 
 const resolver = new Resolver();
 
@@ -39,6 +40,14 @@ resolver.define('callOpenAI', ({ context, payload }) => {
         fetchImpl: globalThis.fetch,
         apiKey: getOpenAPIKey(),
         model: getOpenAPIModel()
+    }).then(async result => {
+        try {
+            await recordSuccessfulAnalysis();
+        } catch (error) {
+            console.error('Usage tracking write failed:', error);
+        }
+
+        return result;
     });
 });
 

@@ -174,7 +174,7 @@ Aktueller Stand:
 - Modul: `jira:issuePanel`
 - Render-Modus: `native`
 - UI-Technologie: Forge UI Kit
-- Scope: `read:jira-work`
+- Scopes: `read:jira-work`, `storage:app`
 - Externer Egress: `api.openai.com`
 
 ### Umgebungsvariable
@@ -199,6 +199,7 @@ Aktuell sind insbesondere diese Bereiche abgedeckt:
 
 - Parsing- und Transformationshilfen der Reflection-Analyse
 - Resolver-nahe Service-Logik fuer Jira- und OpenAI-Requests
+- KVS-basierte Usage-Grundlagen fuer spaetere Limits
 
 Testlauf:
 
@@ -232,6 +233,21 @@ Fuer den produktiven Betrieb sollten diese organisatorischen Punkte definiert we
 - Release-Prozess
 - Changelog
 - Datenschutz- und Loeschkonzept
+
+## Storage-Basis fuer Vendor-funded Limits
+
+Die App nutzt jetzt Forge Key-Value Store ueber `@forge/kvs`, um eine erste Usage-Zusammenfassung pro Installation abzulegen.
+
+Aktuell wird nach jeder erfolgreichen Analyse eine kleine Usage-Statistik gepflegt, die als Grundlage fuer die naechsten Schritte dient:
+
+- Gesamtanzahl erfolgreicher Analysen
+- Zeitpunkt der letzten erfolgreichen Analyse
+
+Die erste KVS-Logik liegt in:
+
+- [src/resolvers/usage-store.mjs](/Users/hichamelmalki/projects/JiraOpenAI/JiraOpenAI/src/resolvers/usage-store.mjs)
+
+Darauf bauen wir im naechsten Schritt die eigentlichen Tages-, Monats- und Nutzerlimits auf.
 
 ## Rechtliche und Security-Dokumente
 
