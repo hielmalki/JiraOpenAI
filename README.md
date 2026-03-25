@@ -238,16 +238,23 @@ Fuer den produktiven Betrieb sollten diese organisatorischen Punkte definiert we
 
 Die App nutzt jetzt Forge Key-Value Store ueber `@forge/kvs`, um eine erste Usage-Zusammenfassung pro Installation abzulegen.
 
-Aktuell wird nach jeder erfolgreichen Analyse eine kleine Usage-Statistik gepflegt, die als Grundlage fuer die naechsten Schritte dient:
+Aktuell wird nach jeder erfolgreichen Analyse eine Usage-Statistik pro Installation gepflegt. Darauf basieren jetzt auch die ersten einfachen Vendor-funded-Schutzmechanismen:
 
 - Gesamtanzahl erfolgreicher Analysen
 - Zeitpunkt der letzten erfolgreichen Analyse
+- Tageslimit pro Installation: `20`
+- Monatslimit pro Installation: `200`
+
+Die Buckets werden beim Request lazy zurueckgesetzt:
+
+- neuer Tag -> Tageszaehler auf `0`
+- neuer Monat -> Monatszaehler auf `0`
 
 Die erste KVS-Logik liegt in:
 
 - [src/resolvers/usage-store.mjs](/Users/hichamelmalki/projects/JiraOpenAI/JiraOpenAI/src/resolvers/usage-store.mjs)
 
-Darauf bauen wir im naechsten Schritt die eigentlichen Tages-, Monats- und Nutzerlimits auf.
+Im naechsten Schritt bauen wir darauf das Nutzerlimit pro Stunde und spaeter planabhaengige Limits auf.
 
 ## Rechtliche und Security-Dokumente
 

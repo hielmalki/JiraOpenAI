@@ -1,7 +1,11 @@
 import Resolver from '@forge/resolver';
 import api, { route } from '@forge/api';
 import { assertLicensed, getLicenseState, resolveIssueData, resolveOpenAI } from './service.mjs';
-import { recordSuccessfulAnalysis } from './usage-store.mjs';
+import {
+    assertWithinInstallationLimits,
+    prepareUsageSummary,
+    recordSuccessfulAnalysis
+} from './usage-store.mjs';
 
 const resolver = new Resolver();
 
@@ -27,7 +31,7 @@ resolver.define('getIssueData', ({ context }) => {
     });
 });
 
-resolver.define('callOpenAI', ({ context, payload }) => {
+resolver.define('callOpenAI', async ({ context, payload }) => {
     assertLicensed(
         getLicenseState({
             context,
@@ -35,20 +39,24 @@ resolver.define('callOpenAI', ({ context, payload }) => {
         })
     );
 
-    return resolveOpenAI({
+    const now = new Date();
+    const usageSummary = await prepareUsageSummary(undefined, now);
+    assertWithinInstallationLimits(usageSummary);
+
+    const result = await resolveOpenAI({
         prompt: payload.prompt,
         fetchImpl: globalThis.fetch,
         apiKey: getOpenAPIKey(),
         model: getOpenAPIModel()
-    }).then(async result => {
-        try {
-            await recordSuccessfulAnalysis();
-        } catch (error) {
-            console.error('Usage tracking write failed:', error);
-        }
-
-        return result;
     });
+
+    try {
+        await recordSuccessfulAnalysis(undefined, now, usageSummary);
+    } catch (error) {
+        console.error('Usage tracking write failed:', error);
+    }
+
+    return result;
 });
 
 // Helpers
