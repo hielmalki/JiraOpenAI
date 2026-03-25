@@ -2,15 +2,25 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
     assertWithinInstallationLimits,
+    assertWithinUserHourlyLimit,
     createDefaultUsageSummary,
+    createDefaultUserHourlyUsage,
     DEFAULT_DAILY_LIMIT,
+    DEFAULT_HOURLY_USER_LIMIT,
     DEFAULT_MONTHLY_LIMIT,
     formatDayBucket,
+    formatHourBucket,
     formatMonthBucket,
+    getUserAccountId,
+    getUserHourlyUsage,
+    getUserHourlyUsageKey,
     getUsageSummary,
+    prepareUserHourlyUsage,
     prepareUsageSummary,
     recordSuccessfulAnalysis,
-    resetUsageBucketsIfNeeded
+    recordSuccessfulUserAnalysis,
+    resetUsageBucketsIfNeeded,
+    resetUserHourlyBucketIfNeeded
 } from '../src/resolvers/usage-store.mjs';
 
 test('createDefaultUsageSummary creates an empty usage state with default limits', () => {
@@ -39,6 +49,33 @@ test('formatDayBucket and formatMonthBucket create stable bucket keys', () => {
 
     assert.equal(formatDayBucket(now), '2026-03-25');
     assert.equal(formatMonthBucket(now), '2026-03');
+    assert.equal(formatHourBucket(now), '2026-03-25T10');
+});
+
+test('getUserAccountId resolves the most useful account id from context', () => {
+    assert.equal(getUserAccountId({ accountId: 'user-1' }), 'user-1');
+    assert.equal(getUserAccountId({ principal: { accountId: 'user-2' } }), 'user-2');
+    assert.equal(getUserAccountId({ extension: { user: { accountId: 'user-3' } } }), 'user-3');
+    assert.equal(getUserAccountId({}), 'anonymous');
+});
+
+test('createDefaultUserHourlyUsage creates an empty hourly user state', () => {
+    const now = new Date('2026-03-25T10:00:00.000Z');
+
+    assert.deepEqual(createDefaultUserHourlyUsage('user-1', now), {
+        version: 1,
+        accountId: 'user-1',
+        hourly: {
+            bucket: '2026-03-25T10',
+            count: 0,
+            limit: DEFAULT_HOURLY_USER_LIMIT
+        },
+        updatedAt: '2026-03-25T10:00:00.000Z'
+    });
+});
+
+test('getUserHourlyUsageKey creates a stable namespaced key', () => {
+    assert.equal(getUserHourlyUsageKey('user-1'), 'usage.user.user-1.hourly');
 });
 
 test('getUsageSummary normalizes legacy summaries to include daily and monthly limits', async () => {
@@ -123,6 +160,65 @@ test('prepareUsageSummary lazily resets outdated daily and monthly buckets', asy
     assert.deepEqual(persistedValue, result);
 });
 
+test('prepareUserHourlyUsage lazily resets outdated hourly bucket', async () => {
+    const now = new Date('2026-03-25T10:00:00.000Z');
+    let persistedValue;
+
+    const store = {
+        async get(key) {
+            assert.equal(key, 'usage.user.user-1.hourly');
+            return {
+                version: 1,
+                accountId: 'user-1',
+                hourly: {
+                    bucket: '2026-03-25T09',
+                    count: 4,
+                    limit: DEFAULT_HOURLY_USER_LIMIT
+                },
+                updatedAt: '2026-03-25T09:30:00.000Z'
+            };
+        },
+        async set(key, value) {
+            assert.equal(key, 'usage.user.user-1.hourly');
+            persistedValue = value;
+        }
+    };
+
+    const result = await prepareUserHourlyUsage('user-1', store, now);
+
+    assert.deepEqual(result, {
+        version: 1,
+        accountId: 'user-1',
+        hourly: {
+            bucket: '2026-03-25T10',
+            count: 0,
+            limit: DEFAULT_HOURLY_USER_LIMIT
+        },
+        updatedAt: '2026-03-25T09:30:00.000Z'
+    });
+    assert.deepEqual(persistedValue, result);
+});
+
+test('getUserHourlyUsage returns default hourly usage when nothing is stored', async () => {
+    const now = new Date('2026-03-25T10:00:00.000Z');
+    const store = {
+        async get() {
+            return null;
+        }
+    };
+
+    assert.deepEqual(await getUserHourlyUsage('user-1', store, now), {
+        version: 1,
+        accountId: 'user-1',
+        hourly: {
+            bucket: '2026-03-25T10',
+            count: 0,
+            limit: DEFAULT_HOURLY_USER_LIMIT
+        },
+        updatedAt: '2026-03-25T10:00:00.000Z'
+    });
+});
+
 test('resetUsageBucketsIfNeeded keeps current buckets unchanged', () => {
     const now = new Date('2026-03-25T10:00:00.000Z');
     const summary = {
@@ -145,6 +241,22 @@ test('resetUsageBucketsIfNeeded keeps current buckets unchanged', () => {
     assert.deepEqual(resetUsageBucketsIfNeeded(summary, now), summary);
 });
 
+test('resetUserHourlyBucketIfNeeded keeps current bucket unchanged', () => {
+    const now = new Date('2026-03-25T10:00:00.000Z');
+    const usage = {
+        version: 1,
+        accountId: 'user-1',
+        hourly: {
+            bucket: '2026-03-25T10',
+            count: 2,
+            limit: DEFAULT_HOURLY_USER_LIMIT
+        },
+        updatedAt: '2026-03-25T10:00:00.000Z'
+    };
+
+    assert.deepEqual(resetUserHourlyBucketIfNeeded('user-1', usage, now), usage);
+});
+
 test('assertWithinInstallationLimits rejects when the daily limit is reached', () => {
     assert.throws(
         () =>
@@ -164,6 +276,20 @@ test('assertWithinInstallationLimits rejects when the monthly limit is reached',
                 monthly: { bucket: '2026-03', count: DEFAULT_MONTHLY_LIMIT, limit: DEFAULT_MONTHLY_LIMIT }
             }),
         error => error.code === 'MONTHLY_LIMIT_REACHED'
+    );
+});
+
+test('assertWithinUserHourlyLimit rejects when the hourly user limit is reached', () => {
+    assert.throws(
+        () =>
+            assertWithinUserHourlyLimit({
+                hourly: {
+                    bucket: '2026-03-25T10',
+                    count: DEFAULT_HOURLY_USER_LIMIT,
+                    limit: DEFAULT_HOURLY_USER_LIMIT
+                }
+            }),
+        error => error.code === 'USER_HOURLY_LIMIT_REACHED'
     );
 });
 
@@ -214,6 +340,46 @@ test('recordSuccessfulAnalysis increments total, daily and monthly counters', as
             count: 10,
             limit: DEFAULT_MONTHLY_LIMIT
         }
+    });
+    assert.deepEqual(persistedValue, result);
+});
+
+test('recordSuccessfulUserAnalysis increments the hourly user counter', async () => {
+    const now = new Date('2026-03-25T11:30:00.000Z');
+    let persistedValue;
+
+    const store = {
+        async set(key, value) {
+            assert.equal(key, 'usage.user.user-1.hourly');
+            persistedValue = value;
+        }
+    };
+
+    const result = await recordSuccessfulUserAnalysis(
+        'user-1',
+        store,
+        now,
+        {
+            version: 1,
+            accountId: 'user-1',
+            hourly: {
+                bucket: '2026-03-25T11',
+                count: 3,
+                limit: DEFAULT_HOURLY_USER_LIMIT
+            },
+            updatedAt: '2026-03-25T11:00:00.000Z'
+        }
+    );
+
+    assert.deepEqual(result, {
+        version: 1,
+        accountId: 'user-1',
+        hourly: {
+            bucket: '2026-03-25T11',
+            count: 4,
+            limit: DEFAULT_HOURLY_USER_LIMIT
+        },
+        updatedAt: '2026-03-25T11:30:00.000Z'
     });
     assert.deepEqual(persistedValue, result);
 });

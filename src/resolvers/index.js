@@ -3,8 +3,12 @@ import api, { route } from '@forge/api';
 import { assertLicensed, getLicenseState, resolveIssueData, resolveOpenAI } from './service.mjs';
 import {
     assertWithinInstallationLimits,
+    assertWithinUserHourlyLimit,
+    getUserAccountId,
     prepareUsageSummary,
-    recordSuccessfulAnalysis
+    prepareUserHourlyUsage,
+    recordSuccessfulAnalysis,
+    recordSuccessfulUserAnalysis
 } from './usage-store.mjs';
 
 const resolver = new Resolver();
@@ -40,8 +44,11 @@ resolver.define('callOpenAI', async ({ context, payload }) => {
     );
 
     const now = new Date();
+    const accountId = getUserAccountId(context);
     const usageSummary = await prepareUsageSummary(undefined, now);
+    const userHourlyUsage = await prepareUserHourlyUsage(accountId, undefined, now);
     assertWithinInstallationLimits(usageSummary);
+    assertWithinUserHourlyLimit(userHourlyUsage);
 
     const result = await resolveOpenAI({
         prompt: payload.prompt,
@@ -54,6 +61,12 @@ resolver.define('callOpenAI', async ({ context, payload }) => {
         await recordSuccessfulAnalysis(undefined, now, usageSummary);
     } catch (error) {
         console.error('Usage tracking write failed:', error);
+    }
+
+    try {
+        await recordSuccessfulUserAnalysis(accountId, undefined, now, userHourlyUsage);
+    } catch (error) {
+        console.error('User usage tracking write failed:', error);
     }
 
     return result;
