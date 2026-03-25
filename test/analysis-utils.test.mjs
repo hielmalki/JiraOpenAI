@@ -1,14 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+    buildAnalysisPrompt,
     extractCustomFieldText,
     extractTextFromDescription,
     getAverageScore,
     getScoreHint,
+    MAX_ANALYSIS_INPUT_CHARS,
     normalizeAnalysisPayload,
     normalizeScore,
     normalizeSuggestions,
-    parseJSON
+    parseJSON,
+    truncateText
 } from '../src/frontend/analysis-utils.mjs';
 
 test('parseJSON parses valid JSON strings', () => {
@@ -109,4 +112,42 @@ test('normalizeAnalysisPayload rejects unusable responses', () => {
         () => normalizeAnalysisPayload('{}'),
         /keine verwertbaren Scores/i
     );
+});
+
+test('truncateText leaves short values untouched and truncates long values', () => {
+    assert.deepEqual(truncateText('Kurz', 10), {
+        text: 'Kurz',
+        wasTruncated: false
+    });
+
+    assert.deepEqual(truncateText('ABCDEFGHIJ', 5), {
+        text: 'ABCD…',
+        wasTruncated: true
+    });
+});
+
+test('buildAnalysisPrompt limits the combined Jira input length', () => {
+    const longDescription = 'A'.repeat(MAX_ANALYSIS_INPUT_CHARS + 100);
+    const result = buildAnalysisPrompt({
+        title: 'Titel',
+        descriptionText: longDescription,
+        acceptanceCriteria: 'Kriterium'
+    });
+
+    assert.equal(result.wasTruncated, true);
+    assert.ok(result.prompt.includes('Analysiere die folgenden Inhalte:'));
+    assert.ok(result.truncatedInput.length <= MAX_ANALYSIS_INPUT_CHARS);
+});
+
+test('buildAnalysisPrompt keeps shorter inputs intact', () => {
+    const result = buildAnalysisPrompt({
+        title: 'Titel',
+        descriptionText: 'Beschreibung',
+        acceptanceCriteria: 'Kriterium'
+    });
+
+    assert.equal(result.wasTruncated, false);
+    assert.ok(result.prompt.includes('Titel'));
+    assert.ok(result.prompt.includes('Beschreibung'));
+    assert.ok(result.prompt.includes('Kriterium'));
 });

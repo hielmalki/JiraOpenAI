@@ -245,6 +245,7 @@ Aktuell wird nach jeder erfolgreichen Analyse eine Usage-Statistik pro Installat
 - Tageslimit pro Installation: `20`
 - Monatslimit pro Installation: `200`
 - Nutzerlimit pro Stunde: `5`
+- maximales Analyse-Input-Limit: `8.000` Zeichen Gesamtinput
 
 Die Buckets werden beim Request lazy zurueckgesetzt:
 
@@ -258,6 +259,8 @@ Benutzer sehen bei erreichter Grenze jetzt gezielte UI-Hinweise fuer:
 - Tageslimit erreicht
 - Monatslimit erreicht
 - Nutzerlimit pro Stunde erreicht
+
+Sehr lange Jira-Inhalte werden vor dem OpenAI-Call auf einen stabilen Gesamtumfang begrenzt. Die Analyse wird dabei nicht blockiert, sondern mit einem gekürzten Textauszug ausgeführt.
 
 Die erste KVS-Logik liegt in:
 

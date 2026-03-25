@@ -14,6 +14,7 @@ import ReflectionHeader from './components/ReflectionHeader';
 import ScoreRow from './components/ScoreRow';
 import SuggestionsList from './components/SuggestionsList';
 import {
+    buildAnalysisPrompt,
     extractCustomFieldText,
     extractTextFromDescription,
     getAverageScore,
@@ -73,6 +74,9 @@ const App = () => {
     const [status, setStatus] = useState(STATUS.loading);
     const [error, setError] = useState(null);
     const [licenseSource, setLicenseSource] = useState('');
+    const [analysisMeta, setAnalysisMeta] = useState({
+        wasInputTruncated: false
+    });
 
     useEffect(() => {
         (async () => {
@@ -92,10 +96,18 @@ const App = () => {
                 const { description, customfield, title } = JSON.parse(issueData);
                 const descriptionText = extractTextFromDescription(description);
                 const acceptanceCriteria = extractCustomFieldText(customfield);
+                const analysisPrompt = buildAnalysisPrompt({
+                    title,
+                    descriptionText,
+                    acceptanceCriteria
+                });
 
                 setMeta({
                     title: title || '',
                     acceptanceCriteria
+                });
+                setAnalysisMeta({
+                    wasInputTruncated: analysisPrompt.wasTruncated
                 });
 
                 if (!descriptionText && !acceptanceCriteria) {
@@ -104,17 +116,7 @@ const App = () => {
                     return;
                 }
 
-                const prompt = `
-Dies ist die Anforderung eines Features mit dem Titel: "${title}", extrahiert aus einer Jira-Beschreibung: "${descriptionText}"
-und den Akzeptanzkriterien: "${acceptanceCriteria}".
-Du bist ein professioneller Requirement Engineer. Bewerte die Anforderung in 3 Kategorien (je 1–10):
-• Verständlichkeit: Vollständigkeit der Eingaben, Detailtiefe und Klarheit der Informationen
-• Konsistenz: keine Widersprüche, keine Logikfehler, inhaltliche Übereinstimmung der Jira-Felder zueinander
-• Value: Validierbares (testbares) Ziel muss formuliert sein, ein messbarer Business Value erkennbar
-Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
-`.trim();
-
-                const result = await invoke('callOpenAI', { prompt });
+                const result = await invoke('callOpenAI', { prompt: analysisPrompt.prompt });
                 const parsedResult = normalizeAnalysisPayload(result);
                 setAnalysis(parsedResult);
                 setStatus(STATUS.ready);
@@ -156,6 +158,7 @@ Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
 
                 {status === STATUS.ready && (
                     <Stack space="space.200">
+                        {analysisMeta.wasInputTruncated && <TruncatedInputNotice />}
                         {hasWarning && <InsightBanner />}
 
                         <ScoresSection analysis={result} />
@@ -185,6 +188,15 @@ const SummarySection = () => (
 const InsightBanner = () => (
     <SectionMessage appearance="warning" title="Verbesserungspotenzial gefunden">
         <Text>Mindestens eine Kategorie liegt unter 6/10 und sollte nachgeschärft werden.</Text>
+    </SectionMessage>
+);
+
+const TruncatedInputNotice = () => (
+    <SectionMessage appearance="information" title="Analyse mit gekürztem Textauszug">
+        <Text>
+            Der Jira-Inhalt war sehr lang. Für eine stabile und kosteneffiziente Analyse wurde ein gekürzter Auszug
+            verwendet.
+        </Text>
     </SectionMessage>
 );
 

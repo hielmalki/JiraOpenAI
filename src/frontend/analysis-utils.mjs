@@ -1,4 +1,5 @@
 const SCORE_THRESHOLD = 6;
+export const MAX_ANALYSIS_INPUT_CHARS = 8000;
 
 export function normalizeAnalysisPayload(payload) {
     const raw = parseJSON(payload);
@@ -130,4 +131,49 @@ export function extractTextFromDescription(description) {
     });
 
     return text.trim();
+}
+
+export function truncateText(value, maxChars) {
+    const text = typeof value === 'string' ? value.trim() : '';
+    if (!text || text.length <= maxChars) {
+        return {
+            text,
+            wasTruncated: false
+        };
+    }
+
+    return {
+        text: `${text.slice(0, Math.max(0, maxChars - 1)).trimEnd()}…`,
+        wasTruncated: true
+    };
+}
+
+export function buildAnalysisPrompt({
+    title = '',
+    descriptionText = '',
+    acceptanceCriteria = '',
+    maxChars = MAX_ANALYSIS_INPUT_CHARS
+}) {
+    const rawInput = [title, descriptionText, acceptanceCriteria].filter(Boolean).join('\n\n');
+    const truncatedInput = truncateText(rawInput, maxChars);
+    const instructionBlock = `
+Dies ist die Anforderung eines Features aus Jira.
+
+Analysiere die folgenden Inhalte:
+${truncatedInput.text}
+
+Du bist ein professioneller Requirement Engineer. Bewerte die Anforderung in 3 Kategorien (je 1-10):
+- Verständlichkeit: Vollständigkeit der Eingaben, Detailtiefe und Klarheit der Informationen
+- Konsistenz: keine Widersprüche, keine Logikfehler, inhaltliche Übereinstimmung der Jira-Felder zueinander
+- Value: Validierbares (testbares) Ziel muss formuliert sein, ein messbarer Business Value erkennbar
+
+Gib außerdem kurze Verbesserungsvorschläge als Array zurück.
+`.trim();
+
+    return {
+        prompt: instructionBlock,
+        rawInput,
+        truncatedInput: truncatedInput.text,
+        wasTruncated: truncatedInput.wasTruncated
+    };
 }
