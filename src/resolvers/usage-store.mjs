@@ -4,9 +4,9 @@ import { APP_ERROR_CODES, createAppError } from '../shared/app-errors.mjs';
 const USAGE_SUMMARY_KEY = 'usage.summary';
 const USER_HOURLY_USAGE_PREFIX = 'usage.user';
 
-export const DEFAULT_DAILY_LIMIT = 100;
+export const DEFAULT_DAILY_LIMIT = 200;
 export const DEFAULT_MONTHLY_LIMIT = 200;
-export const DEFAULT_HOURLY_USER_LIMIT = 100;
+export const DEFAULT_HOURLY_USER_LIMIT = 200;
 
 export function formatDayBucket(now = new Date()) {
     return now.toISOString().slice(0, 10);

@@ -242,9 +242,9 @@ Aktuell wird nach jeder erfolgreichen Analyse eine Usage-Statistik pro Installat
 
 - Gesamtanzahl erfolgreicher Analysen
 - Zeitpunkt der letzten erfolgreichen Analyse
-- Tageslimit pro Installation: `20`
+- Tageslimit pro Installation: `200`
 - Monatslimit pro Installation: `200`
-- Nutzerlimit pro Stunde: `5`
+- Nutzerlimit pro Stunde: `200`
 - maximales Analyse-Input-Limit: `8.000` Zeichen Gesamtinput
 
 Die Buckets werden beim Request lazy zurueckgesetzt:
