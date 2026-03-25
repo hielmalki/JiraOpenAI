@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Heading, Inline, Lozenge, PieChart, Stack, Text, Tooltip } from '@forge/react';
+import { Box, Heading, Inline, Lozenge, Stack, Strong, Text, Tooltip } from '@forge/react';
 
 const heroStyles = {
     paddingBlock: 'space.100'
@@ -17,8 +17,18 @@ const scoreCardStyles = {
     paddingBlock: 'space.025'
 };
 
-const indicatorWrapperStyles = {
-    minWidth: '88px'
+const usageIndicatorStyles = {
+    paddingInline: 'space.100',
+    paddingBlock: 'space.050',
+    borderRadius: 'border.radius',
+    backgroundColor: 'color.background.neutral.subtle'
+};
+
+const usageIndicatorWarningStyles = {
+    paddingInline: 'space.100',
+    paddingBlock: 'space.050',
+    borderRadius: 'border.radius',
+    backgroundColor: 'color.background.warning'
 };
 
 const buildMonthlyUsageModel = usage => {
@@ -31,14 +41,12 @@ const buildMonthlyUsageModel = usage => {
     const limit = Math.max(1, Number(monthly.limit) || 1);
     const count = Math.max(0, Number(monthly.count) || 0);
     const percent = Math.min(100, Math.round((count / limit) * 100));
-    const remaining = Math.max(0, limit - count);
 
     return {
         count,
         limit,
         percent,
-        remaining,
-        colorToken: percent > 80 ? 'color.chart.orange.bold' : 'color.chart.neutral'
+        isWarning: percent > 80
     };
 };
 
@@ -73,33 +81,12 @@ const UsageIndicator = ({ usage }) => {
         return null;
     }
 
-    const chartData = [
-        {
-            label: 'Verwendet',
-            value: monthlyModel.count
-        },
-        {
-            label: 'Verbleibend',
-            value: monthlyModel.remaining
-        }
-    ];
-
     return (
         <Tooltip text={tooltipText}>
-            <Box xcss={indicatorWrapperStyles}>
-                <PieChart
-                    data={chartData}
-                    width={72}
-                    height={72}
-                    isDonut
-                    showBorder={false}
-                    colorAccessor="label"
-                    valueAccessor="value"
-                    labelAccessor="label"
-                    title={`${monthlyModel.percent}%`}
-                    subtitle={`${monthlyModel.count} / ${monthlyModel.limit}`}
-                    colors={[monthlyModel.colorToken, 'color.chart.gray.bold']}
-                />
+            <Box xcss={monthlyModel.isWarning ? usageIndicatorWarningStyles : usageIndicatorStyles}>
+                <Text>
+                    Nutzung <Strong>{`${monthlyModel.percent}%`}</Strong>
+                </Text>
             </Box>
         </Tooltip>
     );
