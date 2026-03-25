@@ -59,30 +59,34 @@ const buildUsageTooltipText = usage => {
         return '';
     }
 
-    return [
-        'Nutzung',
-        '',
-        'Monat:',
-        `${monthlyModel.count} / ${monthlyModel.limit} (${monthlyModel.percent}%)`,
-        '',
-        'Heute:',
-        `${daily.count} / ${daily.limit}`,
-        '',
-        'Stunde:',
-        `${hourly.count} / ${hourly.limit}`
-    ].join('\n');
+    return {
+        monthlyModel,
+        daily,
+        hourly
+    };
 };
 
 const UsageIndicator = ({ usage }) => {
     const monthlyModel = buildMonthlyUsageModel(usage);
-    const tooltipText = buildUsageTooltipText(usage);
+    const tooltipData = buildUsageTooltipText(usage);
 
-    if (!monthlyModel || !tooltipText) {
+    if (!monthlyModel || !tooltipData) {
         return null;
     }
 
     return (
-        <Tooltip text={tooltipText}>
+        <Tooltip
+            content={
+                <Stack space="space.050">
+                    <Text>
+                        <Strong>Nutzung</Strong>
+                    </Text>
+                    <Text>{`Monat: ${tooltipData.monthlyModel.count} / ${tooltipData.monthlyModel.limit} (${tooltipData.monthlyModel.percent}%)`}</Text>
+                    <Text>{`Heute: ${tooltipData.daily.count} / ${tooltipData.daily.limit}`}</Text>
+                    <Text>{`Stunde: ${tooltipData.hourly.count} / ${tooltipData.hourly.limit}`}</Text>
+                </Stack>
+            }
+        >
             <Box xcss={monthlyModel.isWarning ? usageIndicatorWarningStyles : usageIndicatorStyles}>
                 <Text>
                     Nutzung <Strong>{`${monthlyModel.percent}%`}</Strong>
