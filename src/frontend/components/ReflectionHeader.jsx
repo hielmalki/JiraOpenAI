@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Heading, Inline, Lozenge, Stack, Strong, Text } from '@forge/react';
+import { Box, Heading, Inline, Lozenge, PieChart, Stack, Text, Tooltip } from '@forge/react';
 
 const heroStyles = {
     paddingBlock: 'space.100'
@@ -10,100 +10,98 @@ const scoreLabelStyles = {
 };
 
 const metadataColumnStyles = {
-    minWidth: '240px'
+    minWidth: '160px'
 };
 
 const scoreCardStyles = {
     paddingBlock: 'space.025'
 };
 
-const usageCardStyles = {
-    padding: 'space.125',
-    borderRadius: 'border.radius',
-    backgroundColor: 'color.background.neutral.subtle'
+const indicatorWrapperStyles = {
+    minWidth: '88px'
 };
 
-const usageValueStyles = {
-    color: 'color.text.subtle'
-};
+const buildMonthlyUsageModel = usage => {
+    const monthly = usage?.installation?.monthly;
 
-const usageTrackStyles = {
-    width: '100%',
-    height: '4px',
-    borderRadius: 'border.radius',
-    backgroundColor: 'color.background.neutral'
-};
-
-const buildUsageItems = usage => {
-    if (!usage?.installation || !usage?.currentUser) {
-        return [];
-    }
-
-    return [
-        {
-            label: 'Heute',
-            count: usage.installation.daily.count,
-            limit: usage.installation.daily.limit
-        },
-        {
-            label: 'Monat',
-            count: usage.installation.monthly.count,
-            limit: usage.installation.monthly.limit
-        },
-        {
-            label: 'Stunde',
-            count: usage.currentUser.hourly.count,
-            limit: usage.currentUser.hourly.limit
-        }
-    ];
-};
-
-const QuotaCard = ({ usage }) => {
-    const items = buildUsageItems(usage);
-
-    if (!items.length) {
+    if (!monthly) {
         return null;
     }
 
-    return (
-        <Box xcss={usageCardStyles}>
-            <Stack space="space.125">
-                <Text>Nutzung</Text>
-                <Stack space="space.100">
-                    {items.map(item => (
-                        <QuotaStat key={item.label} {...item} />
-                    ))}
-                </Stack>
-            </Stack>
-        </Box>
-    );
+    const limit = Math.max(1, Number(monthly.limit) || 1);
+    const count = Math.max(0, Number(monthly.count) || 0);
+    const percent = Math.min(100, Math.round((count / limit) * 100));
+    const remaining = Math.max(0, limit - count);
+
+    return {
+        count,
+        limit,
+        percent,
+        remaining,
+        colorToken: percent > 80 ? 'color.chart.orange.bold' : 'color.chart.neutral'
+    };
 };
 
-const QuotaStat = ({ label, count, limit }) => {
-    const safeLimit = Math.max(1, Number(limit) || 1);
-    const safeCount = Math.max(0, Number(count) || 0);
-    const percent = Math.min(100, Math.round((safeCount / safeLimit) * 100));
-    const quotaFillStyles = {
-        width: `${percent}%`,
-        height: '4px',
-        borderRadius: 'border.radius',
-        backgroundColor: 'color.background.discovery.bold'
-    };
+const buildUsageTooltipText = usage => {
+    const monthlyModel = buildMonthlyUsageModel(usage);
+    const daily = usage?.installation?.daily;
+    const hourly = usage?.currentUser?.hourly;
+
+    if (!monthlyModel || !daily || !hourly) {
+        return '';
+    }
+
+    return [
+        'Nutzung',
+        '',
+        'Monat:',
+        `${monthlyModel.count} / ${monthlyModel.limit} (${monthlyModel.percent}%)`,
+        '',
+        'Heute:',
+        `${daily.count} / ${daily.limit}`,
+        '',
+        'Stunde:',
+        `${hourly.count} / ${hourly.limit}`
+    ].join('\n');
+};
+
+const UsageIndicator = ({ usage }) => {
+    const monthlyModel = buildMonthlyUsageModel(usage);
+    const tooltipText = buildUsageTooltipText(usage);
+
+    if (!monthlyModel || !tooltipText) {
+        return null;
+    }
+
+    const chartData = [
+        {
+            label: 'Verwendet',
+            value: monthlyModel.count
+        },
+        {
+            label: 'Verbleibend',
+            value: monthlyModel.remaining
+        }
+    ];
 
     return (
-        <Stack space="space.050">
-            <Inline spread="space-between" alignBlock="center">
-                <Text>{label}</Text>
-                <Box xcss={usageValueStyles}>
-                    <Text>
-                        <Strong>{`${safeCount}/${safeLimit}`}</Strong>
-                    </Text>
-                </Box>
-            </Inline>
-            <Box xcss={usageTrackStyles}>
-                <Box xcss={quotaFillStyles} />
+        <Tooltip text={tooltipText}>
+            <Box xcss={indicatorWrapperStyles}>
+                <PieChart
+                    data={chartData}
+                    width={72}
+                    height={72}
+                    isDonut
+                    showBorder={false}
+                    colorAccessor="label"
+                    valueAccessor="value"
+                    labelAccessor="label"
+                    title={`${monthlyModel.percent}%`}
+                    subtitle={`${monthlyModel.count} / ${monthlyModel.limit}`}
+                    colors={[monthlyModel.colorToken, 'color.chart.gray.bold']}
+                />
             </Box>
-        </Stack>
+        </Tooltip>
     );
 };
 
@@ -114,20 +112,18 @@ const ReflectionHeader = ({ averageScore, statusLabel, isReady, usage }) => (
                 <Inline space="space.100" alignBlock="center" shouldWrap>
                     <Heading as="h3">Insight Dashboard</Heading>
                     <Lozenge>{statusLabel}</Lozenge>
+                    <UsageIndicator usage={usage} />
                 </Inline>
                 <Text>AI-basierte Qualitätsreflexion für Verständlichkeit, Konsistenz und Business Value.</Text>
             </Stack>
 
-            <Stack alignInline="stretch" space="space.125" xcss={metadataColumnStyles}>
+            <Stack alignInline="end" space="space.025" xcss={metadataColumnStyles}>
                 <Box xcss={scoreCardStyles}>
-                    <Stack alignInline="end" space="space.025">
-                        <Box xcss={scoreLabelStyles}>
-                            <Text>Durchschnittsscore</Text>
-                        </Box>
-                        <Heading as="h2">{isReady ? `${averageScore}/10` : '--'}</Heading>
-                    </Stack>
+                    <Box xcss={scoreLabelStyles}>
+                        <Text>Durchschnittsscore</Text>
+                    </Box>
                 </Box>
-                <QuotaCard usage={usage} />
+                <Heading as="h2">{isReady ? `${averageScore}/10` : '--'}</Heading>
             </Stack>
         </Inline>
     </Box>
