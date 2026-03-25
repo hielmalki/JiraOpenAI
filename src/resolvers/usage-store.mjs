@@ -74,13 +74,13 @@ export function normalizeUsageSummary(usageSummary, now = new Date()) {
             ...baseSummary.daily,
             ...(usageSummary.daily || {}),
             count: Number(usageSummary?.daily?.count || 0),
-            limit: Number(usageSummary?.daily?.limit || DEFAULT_DAILY_LIMIT)
+            limit: Math.max(DEFAULT_DAILY_LIMIT, Number(usageSummary?.daily?.limit || DEFAULT_DAILY_LIMIT))
         },
         monthly: {
             ...baseSummary.monthly,
             ...(usageSummary.monthly || {}),
             count: Number(usageSummary?.monthly?.count || 0),
-            limit: Number(usageSummary?.monthly?.limit || DEFAULT_MONTHLY_LIMIT)
+            limit: Math.max(DEFAULT_MONTHLY_LIMIT, Number(usageSummary?.monthly?.limit || DEFAULT_MONTHLY_LIMIT))
         }
     };
 }
@@ -99,7 +99,7 @@ export function normalizeUserHourlyUsage(accountId, usage, now = new Date()) {
             ...baseUsage.hourly,
             ...(usage.hourly || {}),
             count: Number(usage?.hourly?.count || 0),
-            limit: Number(usage?.hourly?.limit || DEFAULT_HOURLY_USER_LIMIT)
+            limit: Math.max(DEFAULT_HOURLY_USER_LIMIT, Number(usage?.hourly?.limit || DEFAULT_HOURLY_USER_LIMIT))
         }
     };
 }

@@ -8,33 +8,25 @@ export function getErrorPresentation(error) {
             return {
                 title: 'Keine aktive Lizenz',
                 appearance: 'warning',
-                description: parsed.message,
-                recoveryHint:
-                    'Aktiviere eine Trial- oder Paid-Lizenz für diese Installation, bevor die Analyse weiter genutzt wird.'
+                description: 'Für diese Installation ist aktuell keine aktive Lizenz vorhanden.'
             };
         case APP_ERROR_CODES.DAILY_LIMIT_REACHED:
             return {
                 title: 'Tageslimit erreicht',
                 appearance: 'warning',
-                description: parsed.message,
-                recoveryHint:
-                    'Dieses Tenant-Kontingent wird am nächsten Tag automatisch zurückgesetzt.'
+                description: 'Bitte versuche es morgen erneut.'
             };
         case APP_ERROR_CODES.MONTHLY_LIMIT_REACHED:
             return {
                 title: 'Monatslimit erreicht',
                 appearance: 'warning',
-                description: parsed.message,
-                recoveryHint:
-                    'Das Monatskontingent wird im nächsten Kalendermonat automatisch zurückgesetzt.'
+                description: 'Bitte versuche es im nächsten Monat erneut.'
             };
         case APP_ERROR_CODES.USER_HOURLY_LIMIT_REACHED:
             return {
-                title: 'Zu viele Anfragen in kurzer Zeit',
+                title: 'Stundenlimit erreicht',
                 appearance: 'warning',
-                description: parsed.message,
-                recoveryHint:
-                    'Bitte warte bis zum Beginn der nächsten Stunde, bevor du erneut eine Analyse startest.'
+                description: 'Bitte versuche es in der nächsten Stunde erneut.'
             };
         default:
             return {

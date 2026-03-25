@@ -20,7 +20,9 @@ export function serializeAppError({ code, message }) {
 
 export function parseAppError(rawError) {
     const message = rawError instanceof Error ? rawError.message : String(rawError || '');
-    if (!message.startsWith(ERROR_PREFIX)) {
+    const prefixIndex = message.indexOf(ERROR_PREFIX);
+
+    if (prefixIndex === -1) {
         return {
             code: APP_ERROR_CODES.GENERIC,
             message
@@ -28,7 +30,7 @@ export function parseAppError(rawError) {
     }
 
     try {
-        const parsed = JSON.parse(message.slice(ERROR_PREFIX.length));
+        const parsed = JSON.parse(message.slice(prefixIndex + ERROR_PREFIX.length));
         return {
             code: parsed?.code || APP_ERROR_CODES.GENERIC,
             message: parsed?.message || 'Unbekannter Fehler'

@@ -36,6 +36,20 @@ test('parseAppError falls back to generic errors for plain messages', () => {
     });
 });
 
+test('parseAppError extracts embedded app errors from invoke wrapper messages', () => {
+    assert.deepEqual(
+        parseAppError(
+            new Error(
+                'There was an error invoking the function - APP_ERROR::{"code":"USER_HOURLY_LIMIT_REACHED","message":"Limit"}'
+            )
+        ),
+        {
+            code: APP_ERROR_CODES.USER_HOURLY_LIMIT_REACHED,
+            message: 'Limit'
+        }
+    );
+});
+
 test('getErrorPresentation maps daily limit errors to a warning state', () => {
     const error = createAppError(
         APP_ERROR_CODES.DAILY_LIMIT_REACHED,
@@ -45,8 +59,7 @@ test('getErrorPresentation maps daily limit errors to a warning state', () => {
     assert.deepEqual(getErrorPresentation(error), {
         title: 'Tageslimit erreicht',
         appearance: 'warning',
-        description: 'Tageslimit für diese Installation erreicht. Bitte morgen erneut versuchen.',
-        recoveryHint: 'Dieses Tenant-Kontingent wird am nächsten Tag automatisch zurückgesetzt.'
+        description: 'Bitte versuche es morgen erneut.'
     });
 });
 
@@ -56,8 +69,16 @@ test('getErrorPresentation maps monthly, hourly and license errors correctly', (
         'Monatslimit erreicht'
     );
     assert.equal(
+        getErrorPresentation(createAppError(APP_ERROR_CODES.MONTHLY_LIMIT_REACHED, 'Monatslimit')).description,
+        'Bitte versuche es im nächsten Monat erneut.'
+    );
+    assert.equal(
         getErrorPresentation(createAppError(APP_ERROR_CODES.USER_HOURLY_LIMIT_REACHED, 'Stundenlimit')).title,
-        'Zu viele Anfragen in kurzer Zeit'
+        'Stundenlimit erreicht'
+    );
+    assert.equal(
+        getErrorPresentation(createAppError(APP_ERROR_CODES.USER_HOURLY_LIMIT_REACHED, 'Stundenlimit')).description,
+        'Bitte versuche es in der nächsten Stunde erneut.'
     );
     assert.equal(
         getErrorPresentation(createAppError(APP_ERROR_CODES.LICENSE_REQUIRED, 'Lizenz fehlt')).title,
