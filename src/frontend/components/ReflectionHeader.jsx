@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, Heading, Inline, Lozenge, Popup, Stack, Strong, Text } from '@forge/react';
+import { Box, Button, Heading, Inline, Lozenge, Stack, Strong, Text, Tooltip } from '@forge/react';
 
 const heroStyles = {
     paddingBlock: 'space.100'
@@ -31,19 +31,6 @@ const usageIndicatorWarningStyles = {
     backgroundColor: 'color.background.warning'
 };
 
-const usagePopupStyles = {
-    padding: 'space.125',
-    borderRadius: 'border.radius',
-    borderWidth: 'border.width',
-    borderStyle: 'solid',
-    borderColor: 'color.border',
-    backgroundColor: 'color.background.neutral.subtle'
-};
-
-const usagePopupTextStyles = {
-    color: 'color.text'
-};
-
 const buildMonthlyUsageModel = usage => {
     const monthly = usage?.installation?.monthly;
 
@@ -72,53 +59,28 @@ const buildUsageDetails = usage => {
         return null;
     }
 
-    return {
-        monthlyModel,
-        daily,
-        hourly
-    };
+    return `Monat: ${monthlyModel.count} / ${monthlyModel.limit} (${monthlyModel.percent}%) • Heute: ${daily.count} / ${daily.limit} • Stunde: ${hourly.count} / ${hourly.limit}`;
 };
 
 const UsageIndicator = ({ usage }) => {
     const monthlyModel = buildMonthlyUsageModel(usage);
     const details = buildUsageDetails(usage);
-    const [isOpen, setIsOpen] = React.useState(false);
 
     if (!monthlyModel || !details) {
         return null;
     }
 
     return (
-        <Popup
-            isOpen={isOpen}
-            placement="top"
-            onClose={() => setIsOpen(false)}
-            content={() => (
-                <Box xcss={usagePopupStyles}>
-                    <Box xcss={usagePopupTextStyles}>
-                        <Stack space="space.050">
-                            <Text>
-                                <Strong>Nutzung</Strong>
-                            </Text>
-                            <Text>{`Monat: ${details.monthlyModel.count} / ${details.monthlyModel.limit} (${details.monthlyModel.percent}%)`}</Text>
-                            <Text>{`Heute: ${details.daily.count} / ${details.daily.limit}`}</Text>
-                            <Text>{`Stunde: ${details.hourly.count} / ${details.hourly.limit}`}</Text>
-                        </Stack>
-                    </Box>
-                </Box>
-            )}
-            trigger={() => (
+        <Tooltip content={details} position="top">
+            <Box>
                 <Button
                     appearance="subtle"
                     spacing="none"
-                    onClick={() => setIsOpen(previous => !previous)}
-                    onFocus={() => setIsOpen(true)}
-                    onBlur={() => setIsOpen(false)}
                 >
                     {`Nutzung ${monthlyModel.percent}%`}
                 </Button>
-            )}
-        />
+            </Box>
+        </Tooltip>
     );
 };
 
